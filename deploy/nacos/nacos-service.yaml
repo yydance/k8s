@@ -1,0 +1,33 @@
+kind: Service
+apiVersion: v1
+metadata:
+  name: nacos-svc
+  namespace: common-middleware
+  labels:
+    app: nacos
+spec:
+  type: NodePort
+  ports:
+  - port: 8848
+    nodePort: 38848
+    protocol: TCP
+  selector:
+    app: nacos
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: nacos-headless
+  namespace: common-middleware
+  labels:
+    app: nacos
+  annotations:
+    service.alpha.kubernetes.io/tolerate-unready-endpoints: "true"
+spec:
+  ports:
+    - port: 8848
+      name: server
+      targetPort: 8848
+  clusterIP: None
+  selector:
+    app: nacos

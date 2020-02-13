@@ -1,0 +1,59 @@
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: couchdb
+  namespace: common-middleware
+spec:
+  serviceName: couchdb-hs
+  replicas: 3
+  selector:
+    matchLabels:
+      app: couchdb
+  template:
+    metadata:
+      labels:
+        app: couchdb
+    spec:
+      nodeSelector:
+        apptype: middleware
+      terminationGracePeriodSeconds: 20
+      containers:
+      - name: couchdb
+        imagePullPolicy: IfNotPresent
+        image: harbor.bc.kingsoft.com/public/couchdb:2.3.1
+        env:
+        - name: NODE_METADATA_NAME
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.name
+        - name: NODENAME
+          value: $(NODE_METADATA_NAME).couchdb-hs.common-middleware.svc
+        - name: COUCHDB_USER
+          value: admin
+        - name: COUCHDB_PASSWORD
+          value: denglu0416
+        - name: COUCHDB_SECRET
+          value: 5ac6a8efa41f
+        - name: ERL_FLAGS
+          value: "-name couchdb@$(NODENAME)"
+        - name: ERL_FLAGS
+          value: "-setcookie $(COUCHDB_SECRET)"
+        ports:
+        - name: couchdb
+          containerPort: 5984
+        - name: epmd
+          containerPort: 4369
+        - containerPort: 9100
+        volumeMounts:
+          - name: couchdb-data
+            mountPath: /opt/couchdb/data
+  volumeClaimTemplates:
+  - metadata:
+      name: couchdb-data
+      annotations:
+        volume.beta.kubernetes.io/storage-class: "managed-nfs-storage"
+    spec:
+      accessModes: [ "ReadWriteMany" ]
+      resources:
+        requests:
+          storage: 5Gi

@@ -1,0 +1,32 @@
+kind: Service
+apiVersion: v1
+metadata:
+  name: couchdb-hs
+  namespace: common-middleware
+  labels:
+    app: couchdb
+spec:
+  type: ClusterIP
+  clusterIP: None
+  ports:
+  - port: 5984
+    protocol: TCP
+    targetPort: 5984
+  selector:
+    app: couchdb
+---
+kind: Service
+apiVersion: v1
+metadata:
+  name: couchdb-svc
+  namespace: common-middleware
+  labels:
+    app: couchdb
+spec:
+  type: NodePort
+  ports:
+  - port: 5984
+    nodePort: 30984
+    protocol: TCP
+  selector:
+    app: couchdb

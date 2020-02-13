@@ -1,0 +1,62 @@
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: pv-zk1
+  labels:
+    pv: nfs-zk1
+spec:
+  capacity:
+    storage: 20Gi
+  volumeMode: Filesystem
+  accessModes:
+    - ReadWriteOnce
+  persistentVolumeReclaimPolicy: Recycle
+  storageClassName: nfs-zk
+  mountOptions:
+    - hard
+    - nfsvers=4.1
+  nfs:
+    path: /data/k8s_data/zk1
+    server: 10.10.3.27
+---
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: pv-zk2
+  labels:
+    pv: nfs-zk2
+spec:
+  capacity:
+    storage: 20Gi
+  volumeMode: Filesystem
+  accessModes:
+    - ReadWriteOnce
+  persistentVolumeReclaimPolicy: Recycle
+  storageClassName: nfs-zk
+  mountOptions:
+    - hard
+    - nfsvers=4.1
+  nfs:
+    path: /data/k8s_data/zk2
+    server: 10.10.3.27
+---
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: pv-zk3
+  labels:
+    pv: nfs-zk3
+spec:
+  capacity:
+    storage: 20Gi
+  volumeMode: Filesystem
+  accessModes:
+    - ReadWriteOnce
+  persistentVolumeReclaimPolicy: Recycle
+  storageClassName: nfs-zk
+  mountOptions:
+    - hard
+    - nfsvers=4.1
+  nfs:
+    path: /data/k8s_data/zk3
+    server: 10.10.3.27

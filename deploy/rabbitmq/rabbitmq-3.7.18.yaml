@@ -1,0 +1,221 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: common-middleware
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: rabbitmq
+  namespace: common-middleware
+---
+kind: Role
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  name: endpoint-rabbitmq
+  namespace: common-middleware
+rules:
+- apiGroups: [""]
+  resources: ["endpoints"]
+  verbs: ["get"]
+---
+kind: RoleBinding
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  name: endpoint-rabbitmq
+  namespace: common-middleware
+subjects:
+- kind: ServiceAccount
+  name: rabbitmq
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: endpoint-rabbitmq
+---
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+    name: rabbitmq-data
+    labels:
+      release: rabbitmq-data
+    namespace: common-middleware
+spec:
+    capacity:
+      storage: 10Gi
+    accessModes:
+      - ReadWriteMany
+    persistentVolumeReclaimPolicy: Retain
+    nfs:
+      path: /nfs/rabbitmq
+      server: 10.10.3.27
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: rabbitmq-data-claim
+  namespace: common-middleware
+spec:
+  accessModes:
+    - ReadWriteMany
+  resources:
+    requests:
+      storage: 10Gi
+  selector:
+    matchLabels:
+      release: rabbitmq-data
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: rabbitmq-config
+  namespace: common-middleware
+data:
+  enabled_plugins: |
+      [rabbitmq_management,rabbitmq_peer_discovery_k8s].
+  rabbitmq.conf: |
+      cluster_formation.peer_discovery_backend  = rabbit_peer_discovery_k8s
+      cluster_formation.k8s.host = kubernetes.default.svc.cluster.local
+      cluster_formation.k8s.address_type = hostname
+      cluster_formation.node_cleanup.interval = 10
+      cluster_formation.node_cleanup.only_log_warning = true
+      cluster_partition_handling = autoheal
+      queue_master_locator=min-masters
+      loopback_users.guest = false
+      cluster_formation.randomized_startup_delay_range.min = 0
+      cluster_formation.randomized_startup_delay_range.max = 2
+      cluster_formation.k8s.service_name = rmq-hs
+      cluster_formation.k8s.hostname_suffix = .rmq-hs.common-middleware.svc.cluster.local
+      vm_memory_high_watermark.relative = 0.8
+      disk_free_limit.absolute = 10GB
+---
+kind: Service
+apiVersion: v1
+metadata:
+  name: rmq-hs
+  namespace: common-middleware
+spec:
+  clusterIP: None
+  publishNotReadyAddresses: true
+  ports:
+   - name: rmqtcp
+     port: 5672
+   - name: rmqhttp
+     port: 15672
+  selector:
+    app: rabbitmq
+---
+kind: Service
+apiVersion: v1
+metadata:
+  namespace: common-middleware
+  name: rmq-cs
+spec:
+  type: NodePort
+  ports:
+   - name: rmqhttp
+     protocol: TCP
+     port: 15672
+     targetPort: 15672
+     nodePort: 35671
+   - name: rmqtcp
+     protocol: TCP
+     port: 5672
+     targetPort: 5672
+     nodePort: 35672
+  selector:
+    app: rabbitmq
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: rabbitmq
+  namespace: common-middleware
+spec:
+  serviceName: rmq-hs
+  selector:
+    matchLabels:
+      app: rabbitmq
+  replicas: 3
+  template:
+    metadata:
+      labels:
+        app: rabbitmq
+      annotations:
+        scheduler.alpha.kubernetes.io/affinity: >
+            {
+              "podAntiAffinity": {
+                "requiredDuringSchedulingIgnoredDuringExecution": [{
+                  "labelSelector": {
+                    "matchExpressions": [{
+                      "key": "app",
+                      "operator": "In",
+                      "values": ["rabbitmq"]
+                    }]
+                  },
+                  "topologyKey": "kubernetes.io/hostname"
+                }]
+              }
+            }
+    spec:
+      serviceAccountName: rabbitmq
+      nodeSelector:
+        apptype: middleware
+      terminationGracePeriodSeconds: 10
+      containers:
+      - name: rabbitmq
+        image: rabbitmq:3.7.18
+        resources:
+          limits:
+            cpu: 0.5
+            memory: 2Gi
+          requests:
+            cpu: 0.2
+            memory: 512Mi
+        volumeMounts:
+          - name: config-volume
+            mountPath: /etc/rabbitmq
+          - name: rabbitmq-data
+            mountPath: /var/lib/rabbitmq/mnesia
+        ports:
+          - name: rmqhttp
+            protocol: TCP
+            containerPort: 15672
+          - name: rmqtcp
+            protocol: TCP
+            containerPort: 5672
+        livenessProbe:
+          exec:
+            command: ["rabbitmqctl", "status"]
+          initialDelaySeconds: 60
+          periodSeconds: 60
+          timeoutSeconds: 5
+        readinessProbe:
+          exec:
+            command: ["rabbitmqctl", "status"]
+          initialDelaySeconds: 20
+          periodSeconds: 60
+          timeoutSeconds: 5
+        imagePullPolicy: IfNotPresent
+        env:
+          - name: HOSTNAME
+            valueFrom:
+              fieldRef:
+                fieldPath: metadata.name
+          - name: RABBITMQ_USE_LONGNAME
+            value: "true"
+          - name: RABBITMQ_NODENAME
+            value: "rabbit@$(HOSTNAME).rmq-hs.common-middleware.svc.cluster.local"
+          - name: RABBITMQ_ERLANG_COOKIE
+            value: "mycookie"
+      volumes:
+        - name: config-volume
+          configMap:
+            name: rabbitmq-config
+            items:
+            - key: rabbitmq.conf
+              path: rabbitmq.conf
+            - key: enabled_plugins
+              path: enabled_plugins
+        - name: rabbitmq-data
+          persistentVolumeClaim:
+            claimName: rabbitmq-data-claim

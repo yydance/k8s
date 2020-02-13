@@ -1,0 +1,171 @@
+# 官方nacos-server Dockerfile
+# https://github.com/nacos-group/nacos-docker/blob/master/build/Dockerfile
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: nacos-cm
+  namespace: common-middleware
+data:
+  nacos.server.port: "8848"
+  nacos.mode: "cluster" #单机版值：standalone
+  nacos.db.num: "1"
+  nacos.log.debug: "n"
+  nacos.jvm.xms: "1g"
+  nacos.jvm.xmx: "1g"
+  nacos.jvm.xmn: "512m"
+  nacos.jvm.metaspace: "64m"
+  nacos.jvm.maxmataspace: "128m"
+  nacos.prefer.host.mode: "hostname"
+  nacos.servers: "nacos-0.nacos-headless.common-middleware.svc nacos-1.nacos-headless.common-middleware.svc nacos-2.nacos-headless.common-middleware.svc"
+  nacos.replicas: "4"
+  mysql.master.host: "mysql57-0.mysql57.common-middleware.svc"
+  mysql.master.port: "3306"
+  mysql.master.db.name: "nacos_config"
+  mysql.master.user: "nacos"
+  mysql.master.password: "nacos0416"
+
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: nacos
+  namespace: common-middleware
+spec:
+  serviceName: nacos-headless
+  replicas: 4
+  template:
+    metadata:
+      labels:
+        app: nacos
+      annotations:
+        pod.alpha.kubernetes.io/initialized: "true"
+    spec:
+      nodeSelector:
+        apptype: middleware
+      terminationGracePeriodSeconds: 20
+    #  affinity:
+    #    podAntiAffinity:
+    #      requiredDuringSchedulingIgnoredDuringExecution:
+    #        - labelSelector:
+    #            matchExpressions:
+    #              - key: "app"
+    #                operator: In
+    #                values:
+    #                  - nacos
+    #          topologyKey: "kubernetes.io/hostname"
+    #  serviceAccountName: nfs-client-provisioner
+      initContainers:
+        - name: peer-finder-plugin-install
+          image: harbor.bc.kingsoft.com/public/nacos-peer-finder-plugin:latest
+          imagePullPolicy: Always
+          volumeMounts:
+            - mountPath: "/home/nacos/plugins/peer-finder"
+              name: nacos-plugindir
+      containers:
+        - name: nacos
+          imagePullPolicy: Always
+          image: harbor.bc.kingsoft.com/public/nacos-server:1.1.4
+          resources:
+            requests:
+              memory: "2Gi"
+              cpu: "500m"
+          ports:
+            - containerPort: 8848
+              name: client-port
+          env:
+            - name: NACOS_REPLICAS
+              valueFrom:
+                configMapKeyRef:
+                  name: nacos-cm
+                  key: nacos.replicas
+            - name: SERVICE_NAME
+              value: "nacos-headless"
+            - name: POD_NAMESPACE
+              valueFrom:
+                fieldRef:
+                  apiVersion: v1
+                  fieldPath: metadata.namespace
+            - name: MYSQL_DATABASE_NUM
+              valueFrom:
+                configMapKeyRef:
+                  name: nacos-cm
+                  key: nacos.db.num
+            - name: MYSQL_MASTER_SERVICE_HOST
+              valueFrom:
+                configMapKeyRef:
+                  name: nacos-cm
+                  key: mysql.master.host
+            - name: MYSQL_MASTER_SERVICE_PORT
+              valueFrom:
+                configMapKeyRef:
+                  name: nacos-cm
+                  key: mysql.master.port
+            - name: MYSQL_MASTER_SERVICE_DB_NAME
+              valueFrom:
+                configMapKeyRef:
+                  name: nacos-cm
+                  key: mysql.master.db.name
+            - name: MYSQL_MASTER_SERVICE_USER
+              valueFrom:
+                configMapKeyRef:
+                  name: nacos-cm
+                  key: mysql.master.user
+            - name: MYSQL_MASTER_SERVICE_PASSWORD
+              valueFrom:
+                configMapKeyRef:
+                  name: nacos-cm
+                  key: mysql.master.password
+            - name: NACOS_SERVER_PORT
+              valueFrom:
+                configMapKeyRef:
+                  name: nacos-cm
+                  key: nacos.server.port
+            - name: PREFER_HOST_MODE
+              valueFrom:
+                configMapKeyRef:
+                  name: nacos-cm
+                  key: nacos.prefer.host.mode
+            - name: NACOS_DEBUG
+              valueFrom:
+                configMapKeyRef:
+                  name: nacos-cm
+                  key: nacos.log.debug
+          volumeMounts:
+            - name: nacos-plugindir
+              mountPath: /home/nacos/plugins/peer-finder
+            - name: nacos-datadir
+              mountPath: /home/nacos/data
+            - name: nacos-logdir
+              mountPath: /home/nacos/logs
+  volumeClaimTemplates:
+    - metadata:
+        name: nacos-plugindir
+        annotations:
+          volume.beta.kubernetes.io/storage-class: "managed-nfs-storage"
+      spec:
+        accessModes: [ "ReadWriteMany" ]
+        resources:
+          requests:
+            storage: 5Gi
+    - metadata:
+        name: nacos-datadir
+        annotations:
+          volume.beta.kubernetes.io/storage-class: "managed-nfs-storage"
+      spec:
+        accessModes: [ "ReadWriteMany" ]
+        resources:
+          requests:
+            storage: 5Gi
+    - metadata:
+        name: nacos-logdir
+        annotations:
+          volume.beta.kubernetes.io/storage-class: "managed-nfs-storage"
+      spec:
+        accessModes: [ "ReadWriteMany" ]
+        resources:
+          requests:
+            storage: 5Gi
+  selector:
+    matchLabels:
+      app: nacos
