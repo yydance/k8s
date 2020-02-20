@@ -170,7 +170,7 @@ spec:
           timeoutSeconds: 5
         volumeMounts:
         - name: datadir
-          mountPath: /var/lib/zookeeper
+          mountPath: /data
   volumeClaimTemplates:
   - metadata:
       name: datadir
