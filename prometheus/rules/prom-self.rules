@@ -1,0 +1,117 @@
+group:
+- name: PromSelfStat
+  rules:
+  - alert: PrometheusNotConnectedToAlertmanager
+    expr: prometheus_notifications_alertmanagers_discovered < 1
+    for: 5m
+    labels:
+      severity: error
+    annotations:
+      summary: "Prometheus not connected to alertmanager (instance {{ $labels.instance }})"
+      description: "Prometheus cannot connect the alertmanager\n  VALUE = {{ $value }}\n  LABELS: {{ $labels }}"
+  - alert: PrometheusAlertmanagerConfigNotSynced
+    expr: count(count_values("config_hash", alertmanager_config_hash)) > 1
+    for: 5m
+    labels:
+      severity: warning
+    annotations:
+      summary: "Prometheus AlertManager config not synced (instance {{ $labels.instance }})"
+      description: "Configurations of AlertManager cluster instances are out of sync\n  VALUE = {{ $value }}\n  LABELS: {{ $labels }}"
+  - alert: PrometheusTooManyRestarts
+    expr: changes(process_start_time_seconds{job=~"prometheus|pushgateway|alertmanager"}[15m]) > 2
+    for: 5m
+    labels:
+      severity: warning
+    annotations:
+      summary: "Prometheus too many restarts (instance {{ $labels.instance }})"
+      description: "Prometheus has restarted more than twice in the last 15 minutes. It might be crashlooping.\n  VALUE = {{ $value }}\n  LABELS: {{ $labels }}"
+  - alert: PrometheusJobMissing
+    expr: absent(up{job="my-job"})
+    for: 5m
+    labels:
+      severity: warning
+    annotations:
+      summary: "Prometheus job missing (instance {{ $labels.instance }})"
+      description: "A Prometheus job has disappeared\n  VALUE = {{ $value }}\n  LABELS: {{ $labels }}"
+  - alert: PrometheusTargetEmpty
+    expr: prometheus_sd_discovered_targets == 0
+    for: 5m
+    labels:
+      severity: error
+    annotations:
+      summary: "Prometheus target empty (instance {{ $labels.instance }})"
+      description: "Prometheus has no target in service discovery\n  VALUE = {{ $value }}\n  LABELS: {{ $labels }}"
+  - alert: KubernetesApiServerLatency
+    expr: histogram_quantile(0.99, sum(apiserver_request_latencies_bucket{verb!~"CONNECT|WATCHLIST|WATCH|PROXY"}) WITHOUT (instance, resource)) / 1e+06 > 1
+    for: 5m
+    labels:
+      severity: warning
+    annotations:
+      summary: "Kubernetes API server latency (instance {{ $labels.instance }})"
+      description: "Kubernetes API server has a 99th percentile latency of {{ $value }} seconds for {{ $labels.verb }} {{ $labels.resource }}.\n  VALUE = {{ $value }}\n  LABELS: {{ $labels }}"
+  - alert: KubernetesClientCertificateExpiresSoon
+    expr: apiserver_client_certificate_expiration_seconds_count{job="kubernetes-apiservers"} > 0 and histogram_quantile(0.01, sum by (job, le) (rate(apiserver_client_certificate_expiration_seconds_bucket{job="kubernetes-apiservers"}[5m]))) < 24*60*60
+    for: 5m
+    labels:
+      severity: error
+    annotations:
+      summary: "Kubernetes client certificate expires soon (instance {{ $labels.instance }})"
+      description: "A client certificate used to authenticate to the apiserver is expiring in less than 24.0 hours.\n  VALUE = {{ $value }}\n  LABELS: {{ $labels }}"
+  - alert: KubernetesClientCertificateExpiresNextWeek
+    expr: apiserver_client_certificate_expiration_seconds_count{job="kubernetes-apiservers"} > 0 and histogram_quantile(0.01, sum by (job, le) (rate(apiserver_client_certificate_expiration_seconds_bucket{job="kubernetes-apiservers"}[5m]))) < 7*24*60*60
+    for: 5m
+    labels:
+      severity: warning
+    annotations:
+      summary: "Kubernetes client certificate expires next week (instance {{ $labels.instance }})"
+      description: "A client certificate used to authenticate to the apiserver is expiring next week.\n  VALUE = {{ $value }}\n  LABELS: {{ $labels }}"
+  - alert: KubernetesApiClientErrors
+    expr: (sum(rate(rest_client_requests_total{code=~"(4|5).."}[2m])) by (instance, job) / sum(rate(rest_client_requests_total[2m])) by (instance, job)) * 100 > 1
+    for: 5m
+    labels:
+      severity: error
+    annotations:
+      summary: "Kubernetes API client errors (instance {{ $labels.instance }})"
+      description: "Kubernetes API client is experiencing high error rate\n  VALUE = {{ $value }}\n  LABELS: {{ $labels }}"
+  - alert: KubernetesApiServerErrors
+    expr: sum(rate(apiserver_request_count{job="kubernetes-apiservers",code=~"^(?:5..)$"}[2m])) / sum(rate(apiserver_request_count{job="kubernetes-apiservers"}[2m])) * 100 > 3
+    for: 5m
+    labels:
+      severity: error
+    annotations:
+      summary: "Kubernetes API server errors (instance {{ $labels.instance }})"
+      description: "Kubernetes API server is experiencing high error rate\n  VALUE = {{ $value }}\n  LABELS: {{ $labels }}"
+  - alert: KubernetesDaemonsetMisscheduled
+    expr: kube_daemonset_status_number_misscheduled > 0
+    for: 5m
+    labels:
+      severity: error
+    annotations:
+      summary: "Kubernetes DaemonSet misscheduled (instance {{ $labels.instance }})"
+      description: "Some DaemonSet Pods are running where they are not supposed to run\n  VALUE = {{ $value }}\n  LABELS: {{ $labels }}"
+  - alert: KubernetesDeploymentGenerationMismatch
+    expr: kube_deployment_status_observed_generation != kube_deployment_metadata_generation
+    for: 5m
+    labels:
+      severity: error
+    annotations:
+      summary: "Kubernetes Deployment generation mismatch (instance {{ $labels.instance }})"
+      description: "A Deployment has failed but has not been rolled back.\n  VALUE = {{ $value }}\n  LABELS: {{ $labels }}"
+  - alert: KubernetesStatefulsetReplicasMismatch
+    expr: kube_statefulset_status_replicas_ready != kube_statefulset_status_replicas
+    for: 5m
+    labels:
+      severity: warning
+    annotations:
+      summary: "Kubernetes StatefulSet replicas mismatch (instance {{ $labels.instance }})"
+      description: "A StatefulSet has not matched the expected number of replicas for longer than 15 minutes.\n  VALUE = {{ $value }}\n  LABELS: {{ $labels }}"
+  - alert: KubernetesPodNotHealthy
+    expr: min_over_time(sum by (namespace, pod, env, stage) (kube_pod_status_phase{phase=~"Pending|Unknown|Failed"})[1h:]) > 0
+    for: 5m
+    labels:
+      severity: error
+    annotations:
+      summary: "Kubernetes Pod not healthy (instance {{ $labels.instance }})"
+      description: "Pod has been in a non-ready state for longer than an hour.\n  VALUE = {{ $value }}\n  LABELS: {{ $labels }}"
+
+

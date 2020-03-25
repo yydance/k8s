@@ -1,0 +1,37 @@
+kind: ConfigMap
+apiVersion: v1
+metadata:
+  name: alertmanager-config
+  namespace: monitoring
+data:
+  config.yml: |-
+    global:
+      smtp_from: prometheus-norelay@kingsoft.com
+      smtp_smarthost: bjmail.kingsoft.com:587
+      smtp_hello: kingsoft
+      smtp_auth_username: yangguang2
+      smtp_auth_password: denglu%0416
+      smtp_require_tls: false
+    templates:
+    - '/etc/alertmanager/*.tmpl'
+    route:
+      receiver: alert-emailer
+      group_by: ['alertname', 'priority']
+      group_wait: 1m
+      repeat_interval: 10m
+      routes:
+        - receiver: slack_demo
+          match:
+            severity: slack
+          group_wait: 10s
+          repeat_interval: 1m
+
+    receivers:
+    - name: alert-emailer
+      email_configs:
+      - to: damonops@163.com
+        send_resolved: true
+    - name: slack_demo
+      slack_configs:
+      - api_url: https://hooks.slack.com/services/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sz4Qk
+        channel: '#devopscube-demo'
