@@ -41,7 +41,7 @@ spec:
     spec:
       containers:
         - name: alertmanager
-          image: reg.ksbc.com/kledger/monitor/alertmanager:v1.0.0
+          image: alertmanager:v1.0.0
           imagePullPolicy: Always
           args:
             - "--config.file=/alertmanager/alertmanager.yml"
