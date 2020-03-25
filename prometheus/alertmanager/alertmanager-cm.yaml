@@ -10,7 +10,7 @@ data:
       smtp_smarthost: bjmail.kingsoft.com:587
       smtp_hello: kingsoft
       smtp_auth_username: yangguang2
-      smtp_auth_password: denglu%0416
+      smtp_auth_password: **********
       smtp_require_tls: false
     templates:
     - '/etc/alertmanager/*.tmpl'
