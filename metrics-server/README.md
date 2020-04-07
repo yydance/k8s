@@ -4,7 +4,7 @@
 metrics-server: v0.3.6  
 k8s: 1.14.1
 ### kubelet依赖
-需要kubelet开启webhook，在k8s 1.14.1版本中，kubelet启动参数由--config flag指定(详情见[官方](https://github.com/kubernetes/kubernetes/blob/master/staging/src/k8s.io/kubelet/config/v1beta1/types.go))，这里完整示例：
+需要kubelet开启webhook，在k8s 1.14.1版本中，kubelet启动参数由--config flag指定(详情见[官方](https://github.com/kubernetes/kubernetes/blob/master/staging/src/k8s.io/kubelet/config/v1beta1/types.go)KubeletConfiguration)，这里完整示例：
 ```
 kind: KubeletConfiguration
 apiVersion: kubelet.config.k8s.io/v1beta1
