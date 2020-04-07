@@ -152,3 +152,35 @@ subjects:
   name: metrics-server
   namespace: kube-system
 
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: metrics-server
+rules:
+  - apiGroups:
+      - "metrics.k8s.io"
+    resources:
+      - pods
+      - nodes
+      - nodes/stats
+      - namespaces
+      - configmaps
+    verbs:
+      - get
+      - list
+      - watch
+      - create
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: metrics-server
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: metrics-server
+subjects:
+- kind: User
+  apiGroup: rbac.authorization.k8s.io
+  name: system:metrics-server
