@@ -119,4 +119,29 @@ kubectl apply -f metrics-server/
 }
 ```
 
-2.
+2.k8s-ca-config.json
+```
+{
+  "signing": {
+    "default": {
+      "expiry": "87600h"
+    },
+    "profiles": {
+      "kubernetes": {
+         "expiry": "87600h",
+         "usages": [
+            "signing",
+            "key encipherment",
+            "server auth",
+            "client auth"
+        ]
+      }
+    }
+  }
+}
+```
+
+3.生成证书
+```
+cfssl gencert -ca=/data/app/k8s/certs/k8s-ca.pem -ca-key=/data/app/k8s/certs/k8s-ca-key.pem -config=/data/app/k8s/ca/k8s-ca-config.json -profile=kubernetes metrics-server-csr.json | cfssljson -bare metrics-server
+```
