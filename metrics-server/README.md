@@ -75,7 +75,7 @@ cfssl gencert -ca=/data/app/k8s/certs/k8s-ca.pem -ca-key=/data/app/k8s/certs/k8s
 ```
 
 ### 部署
-配置文件
+配置文件  
 **1.metrics-server-deployment.yaml**  
 修改如下：  
 ```
