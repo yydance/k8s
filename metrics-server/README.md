@@ -25,6 +25,55 @@ authentication:
     clientCAFile: /data/app/k8s/certs/k8s-ca.pem
 ```
 
+### 用户system:metrics-server证书
+1.metrics-server-csr.json  
+```
+{
+  "CN": "system:metrics-server",
+  "hosts": [],
+  "key": {
+    "algo": "rsa",
+    "size": 2048
+  },
+  "names": [
+    {
+      "C": "CN",
+      "ST": "BeiJing",
+      "L": "BeiJing",
+      "O": "k8s",
+      "OU": "System"
+    }
+  ]
+}
+```
+
+2.k8s-ca-config.json
+```
+{
+  "signing": {
+    "default": {
+      "expiry": "87600h"
+    },
+    "profiles": {
+      "kubernetes": {
+         "expiry": "87600h",
+         "usages": [
+            "signing",
+            "key encipherment",
+            "server auth",
+            "client auth"
+        ]
+      }
+    }
+  }
+}
+```
+
+3.生成证书
+```
+cfssl gencert -ca=/data/app/k8s/certs/k8s-ca.pem -ca-key=/data/app/k8s/certs/k8s-ca-key.pem -config=/data/app/k8s/ca/k8s-ca-config.json -profile=kubernetes metrics-server-csr.json | cfssljson -bare metrics-server
+```
+
 ### 部署
 配置文件
 1.metrics-server-deployment.yaml  
@@ -74,7 +123,10 @@ subjects:
   apiGroup: rbac.authorization.k8s.io
   name: system:metrics-server
 ```
-因为我们使用证书用户为system:metrics-server,否则操作是报403`User "system:metrics-server" cannot list resource "pods" in API group "metrics.k8s.io"`
+因为我们使用证书用户为system:metrics-server,否则操作是报403
+```
+User "system:metrics-server" cannot list resource "pods" in API group "metrics.k8s.io"
+```
 
 3.kube-apiserver启动参数调整  
 新增如下：  
@@ -96,52 +148,15 @@ subjects:
 ```
 kubectl apply -f metrics-server/
 ```
-
-### 用户system:metrics-server证书
-1.metrics-server-csr.json  
+### 验测结果
 ```
-{
-  "CN": "system:metrics-server",
-  "hosts": [],
-  "key": {
-    "algo": "rsa",
-    "size": 2048
-  },
-  "names": [
-    {
-      "C": "CN",
-      "ST": "BeiJing",
-      "L": "BeiJing",
-      "O": "k8s",
-      "OU": "System"
-    }
-  ]
-}
+kubectl top no
+NAME            CPU(cores)   CPU%   MEMORY(bytes)   MEMORY%
+bc-hy-master1   264m         6%     5002Mi          64%
+bc-hy-node4     435m         10%    6134Mi          79%
+k8s-node1       178m         4%     3111Mi          40%
+k8s-node2       211m         5%     3829Mi          49%
+k8s-node3       108m         2%     5430Mi          70%
+k8s-node4       194m         4%     3829Mi          49%
 ```
 
-2.k8s-ca-config.json
-```
-{
-  "signing": {
-    "default": {
-      "expiry": "87600h"
-    },
-    "profiles": {
-      "kubernetes": {
-         "expiry": "87600h",
-         "usages": [
-            "signing",
-            "key encipherment",
-            "server auth",
-            "client auth"
-        ]
-      }
-    }
-  }
-}
-```
-
-3.生成证书
-```
-cfssl gencert -ca=/data/app/k8s/certs/k8s-ca.pem -ca-key=/data/app/k8s/certs/k8s-ca-key.pem -config=/data/app/k8s/ca/k8s-ca-config.json -profile=kubernetes metrics-server-csr.json | cfssljson -bare metrics-server
-```
