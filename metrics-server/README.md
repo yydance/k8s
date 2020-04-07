@@ -26,7 +26,7 @@ authentication:
 ```
 
 ### 用户system:metrics-server证书
-1.metrics-server-csr.json  
+**1.metrics-server-csr.json**  
 ```
 {
   "CN": "system:metrics-server",
@@ -47,7 +47,7 @@ authentication:
 }
 ```
 
-2.k8s-ca-config.json
+**2.k8s-ca-config.json**
 ```
 {
   "signing": {
@@ -69,14 +69,14 @@ authentication:
 }
 ```
 
-3.生成证书
+**3.生成证书**
 ```
 cfssl gencert -ca=/data/app/k8s/certs/k8s-ca.pem -ca-key=/data/app/k8s/certs/k8s-ca-key.pem -config=/data/app/k8s/ca/k8s-ca-config.json -profile=kubernetes metrics-server-csr.json | cfssljson -bare metrics-server
 ```
 
 ### 部署
 配置文件
-1.metrics-server-deployment.yaml  
+**1.metrics-server-deployment.yaml**  
 修改如下：  
 ```
 image: mirrorgooglecontainers/metrics-server-amd64
@@ -88,7 +88,7 @@ args:
   - --kubelet-insecure-tls #新增，避免证书hosts中没有node节点IP信息报错
 ```
 
-2.新增metrics-server-crb.yaml  
+**2.新增metrics-server-crb.yaml**  
 ```
 ---
 apiVersion: rbac.authorization.k8s.io/v1
@@ -128,7 +128,7 @@ subjects:
 User "system:metrics-server" cannot list resource "pods" in API group "metrics.k8s.io"
 ```
 
-3.kube-apiserver启动参数调整  
+**3.kube-apiserver启动参数调整**  
 新增如下：  
 ```
 --requestheader-client-ca-file=/data/app/k8s/certs/k8s-ca.pem \
@@ -144,7 +144,7 @@ User "system:metrics-server" cannot list resource "pods" in API group "metrics.k
 --enable-aggregator-routing=true
 ```
 
-4.部署应用yaml文件
+**4.部署应用yaml文件**
 ```
 kubectl apply -f metrics-server/
 ```
