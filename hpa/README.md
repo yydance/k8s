@@ -71,6 +71,7 @@ KUBE_CONTROLLER_MANAGER_OPTS="--logtostderr=false \
 --log-file=/data/logs/k8s/kube-controller-manager.log \
 --v=4 \
 --leader-elect=true \
+--feature-gates=RotateKubeletServerCertificate=true \
 --master=127.0.0.1:8080 \
 --service-cluster-ip-range=172.16.0.0/16 \
 --cluster-cidr=172.20.0.0/16 \
