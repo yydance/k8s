@@ -101,7 +101,7 @@ grafana-ui   StatefulSet/grafana   31469568/500Mi, 0%/60%   1         10        
 
 ### 错误汇总
 现象: kubectl top no/po 能获取到指标,但是hpa应用后TARGETS为Unknown,`kubectl describe hpa grafana -n monitoring`  
-原因: controller-manager服务权限问题,需要授权系统用户system:kube-controller-manager rbac权限,详情参考`https://github.com/kubernetes-sigs/metrics-server/issues/329`   
+原因: controller-manager服务权限问题,需要授权系统用户system:kube-controller-manager rbac权限,详情参考https://github.com/kubernetes-sigs/metrics-server/issues/329   
 解决: 如上步骤生成kube-controller-manager证书及调整controller-manager服务启动参数     
 
 ### 下一步
