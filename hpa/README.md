@@ -1,5 +1,5 @@
 ## K8S HPA部署配置说明
-k8s version: 1.14.1
+k8s version: 1.14.1  
 目录结构:
 ```
 - /data/app/k8s/ # 根目录
@@ -100,9 +100,9 @@ grafana-ui   StatefulSet/grafana   31469568/500Mi, 0%/60%   1         10        
 > 初次部署完成后,TARGETS获取到值无限大,导致直接起了10个replicas,暂未明确原因
 
 ### 错误汇总
-现象: kubectl top no/po 能获取到指标,但是hpa应用后TARGETS为Unknown,`kubectl describe hpa grafana -n monitoring`,
-原因: controller-manager服务权限问题,需要授权系统用户system:kube-controller-manager rbac权限,详情参考`https://github.com/kubernetes-sigs/metrics-server/issues/329`
-解决: 如上步骤生成kube-controller-manager证书及调整controller-manager服务启动参数
+现象: kubectl top no/po 能获取到指标,但是hpa应用后TARGETS为Unknown,`kubectl describe hpa grafana -n monitoring`  
+原因: controller-manager服务权限问题,需要授权系统用户system:kube-controller-manager rbac权限,详情参考`https://github.com/kubernetes-sigs/metrics-server/issues/329`   
+解决: 如上步骤生成kube-controller-manager证书及调整controller-manager服务启动参数     
 
 ### 下一步
 接下来,结合prometheus监控,利用自定义api(custom.metrics.k8s.io)配置服务水平伸缩
