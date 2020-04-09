@@ -7,8 +7,18 @@ k8s version: 1.14.1
   - /data/app/k8s/certs # 生成的pem证书
   - /data/app/k8s/cfg # 服务启动参数配置文件及其他相关配置文件
 ```
-k8s使用示例: [HPA](https://kubernetes.io/docs/tasks/run-application/horizontal-pod-autoscale-walkthrough/)
+k8s使用示例: [HPA](https://kubernetes.io/docs/tasks/run-application/horizontal-pod-autoscale-walkthrough/)  
 
+### HPA简介
+metrics的type字段有四种类型值: Object、Pods、Resource、External  
+- Object
+指定k8s内部对象指标,数据需要第三方adapter提供,只支持Value和AverageValue类型的目标值。
+- Resource
+当前伸缩对象下的pod的CPU和memory指标，只支持Utilization和AverageValue类型目标值。
+- Pods
+伸缩对象Pods指标，数据需要第三方adapter提供，只允许AverageValue类型目标值。
+- External
+k8s外部指标，数据需要第三方adapter提供，只支持Value和AverageValue类型目标值。
 ### 生成kube-controller-manager pem证书
 kube-controller-manager-csr.json
 ```json
