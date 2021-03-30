@@ -3,48 +3,104 @@ kind: StatefulSet
 metadata:
   name: alertmanager
   namespace: monitoring
+  annotations:
+    reloader.stakater.com/auto: "true"
 spec:
-  replicas: 1
   serviceName: alertmanager
+  podManagementPolicy: Parallel
+  replicas: 2
   selector:
     matchLabels:
-      app: alertmanager
+      app.kubernetes.io/name: alertmanager
   template:
     metadata:
-      name: alertmanager
       labels:
-        app: alertmanager
+        app.kubernetes.io/name: alertmanager
     spec:
+      securityContext:
+        fsGroup: 2000
+        runAsNonRoot: true
+        runAsUser: 1000
+      affinity:
+        podAntiAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+          - labelSelector:
+              matchExpressions:
+              - key: app.kubernetes.io/name
+                operator: In
+                values:
+                - alertmanager
+            topologyKey: kubernetes.io/hostname
       containers:
       - name: alertmanager
-        image: harbor.bc.kingsoft.com/public/alertmanager:0.20
+        image: reg.real-ai.cn/public/alertmanager:v0.21.0
         args:
-          - "--config.file=/etc/alertmanager/config.yml"
-          - "--storage.path=/alertmanager"
+        - --config.file=/etc/alertmanager/config.yml
+        - --cluster.listen-address=[$(POD_IP)]:9094
+        - --storage.path=/alertmanager
+        - --data.retention=120h
+        - --web.listen-address=:9093
+        - --web.route-prefix=/
+        - --cluster.peer=alertmanager-0.alertmanager.$(POD_NAMESPACE).svc:9094
+        - --cluster.peer=alertmanager-1.alertmanager.$(POD_NAMESPACE).svc:9094
+        env:
+        - name: POD_IP
+          valueFrom:
+            fieldRef:
+              apiVersion: v1
+              fieldPath: status.podIP
+        - name: POD_NAMESPACE
+          valueFrom:
+            fieldRef:
+              apiVersion: v1
+              fieldPath: metadata.namespace
         ports:
-        - name: alertmanager
-          containerPort: 9093
+        - containerPort: 9093
+          name: web
+          protocol: TCP
+        - containerPort: 9094
+          name: mesh-tcp
+          protocol: TCP
+        - containerPort: 9094
+          name: mesh-udp
+          protocol: UDP
+        livenessProbe:
+          failureThreshold: 10
+          httpGet:
+            path: /-/healthy
+            port: web
+            scheme: HTTP
+          periodSeconds: 10
+          successThreshold: 1
+          timeoutSeconds: 3
+        readinessProbe:
+          failureThreshold: 10
+          httpGet:
+            path: /-/ready
+            port: web
+            scheme: HTTP
+          periodSeconds: 5
+          successThreshold: 1
+          timeoutSeconds: 3
         volumeMounts:
-        - name: config-volume
-          mountPath: /etc/alertmanager
-      #  - name: templates-volume
-      #    mountPath: /etc/alertmanager-templates
-        - name: alertmanager
-          mountPath: /alertmanager
-      volumes:
-      - name: config-volume
-        configMap:
+        - mountPath: /etc/alertmanager
           name: alertmanager-config
-      #- name: templates-volume
-      #  configMap:
-      #    name: alertmanager-templates
+        - mountPath: /alertmanager
+          name: alertmanager-data
+      volumes:
+      - name: alertmanager-config
+        configMap:
+          defaultMode: 420
+          name: alertmanager-config
   volumeClaimTemplates:
   - metadata:
-      name: alertmanager
-      annotations:
-        volume.beta.kubernetes.io/storage-class: "managed-nfs-storage"
+      name: alertmanager-data
+      labels:
+        app.kubernetes.io/name: alertmanager
     spec:
-      accessModes: [ "ReadWriteMany" ]
+      accessModes:
+      - ReadWriteOnce
+      storageClassName: "storage-class-nfs"
       resources:
         requests:
-          storage: 20Gi
+          storage: 30Gi
