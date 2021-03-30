@@ -1,18 +1,16 @@
 apiVersion: extensions/v1beta1
 kind: Ingress
 metadata:
-  name: alertmanager-ui
-  namespace: kbaas-qa2
+  name: alertmanager-ingress
+  namespace: monitoring
   annotations:
-    kubernetes.io/ingress.class: nginx
+    kubernetes.io/ingress.class: "nginx"
 spec:
   rules:
-  - host: alertmanager-ui.example.com
+  - host: alertmanager.realai-inc.cn
     http:
       paths:
-      - backend:
-          serviceName: alertmanager-0
-          servicePort: 9093
-      - backend:
-          serviceName: alertmanager-1
-          servicePort: 9093
+      - path: /
+        backend:
+          serviceName: alertmanager
+          servicePort: alertmanager
