@@ -6,32 +6,27 @@ metadata:
 data:
   config.yml: |-
     global:
-      smtp_from: prometheus-norelay@kingsoft.com
-      smtp_smarthost: bjmail.kingsoft.com:587
-      smtp_hello: kingsoft
-      smtp_auth_username: yangguang2
-      smtp_auth_password: **********
-      smtp_require_tls: false
+      smtp_smarthost: 'xxxx:587'
+      smtp_from: 'username'
+      smtp_auth_username: 'username'
+      smtp_auth_password: 'userpass'
+      smtp_require_tls: true
     templates:
-    - '/etc/alertmanager/*.tmpl'
+    - '/etc/alertmanager/template/*.tmpl'
     route:
-      receiver: alert-emailer
+      receiver: default-emailer
       group_by: ['alertname', 'priority']
-      group_wait: 1m
+      group_wait: 10s
       repeat_interval: 10m
-      routes:
-        - receiver: slack_demo
-          match:
-            severity: slack
-          group_wait: 10s
-          repeat_interval: 1m
+      #routes:
+      #  - receiver: alert-sms
+      #    match:
+      #      severity: sms
+      #    group_wait: 10s
+      #    repeat_interval: 5m
 
     receivers:
-    - name: alert-emailer
+    - name: default-emailer
       email_configs:
-      - to: damonops@163.com
-        send_resolved: true
-    - name: slack_demo
-      slack_configs:
-      - api_url: https://hooks.slack.com/services/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sz4Qk
-        channel: '#devopscube-demo'
+      - to: guang.yang@realai.ai
+        send_resolved: false
