@@ -4,12 +4,10 @@ metadata:
   name: nfs-client-provisioner
   labels:
     app: nfs-client-provisioner
+  # replace with namespace where provisioner is deployed
   namespace: default
 spec:
   replicas: 1
-  selector:
-    matchLabels:
-      app: nfs-client-provisioner
   strategy:
     type: Recreate
   selector:
@@ -23,19 +21,19 @@ spec:
       serviceAccountName: nfs-client-provisioner
       containers:
         - name: nfs-client-provisioner
-          image: harbor.bc.kingsoft.com/public/nfs-client-provisioner #registry.cn-hangzhou.aliyuncs.com/open-ali/nfs-client-provisioner
+          image: k8s.gcr.io/sig-storage/nfs-subdir-external-provisioner:v4.0.2
           volumeMounts:
             - name: nfs-client-root
               mountPath: /persistentvolumes
           env:
             - name: PROVISIONER_NAME
-              value: ksyun.com/nfs
+              value: eeo.cn/nfs-external-provisioner
             - name: NFS_SERVER
-              value: 10.10.3.27
+              value: 10.0.9.198
             - name: NFS_PATH
-              value: /nfs/kubernetes
+              value: /data/data/k8s
       volumes:
         - name: nfs-client-root
           nfs:
-            server: 10.10.3.27
-            path: /nfs/kubernetes
+            server: 10.0.9.198
+            path: /data/data/k8s

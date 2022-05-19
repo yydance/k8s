@@ -5,6 +5,8 @@ metadata:
   namespace: monitoring
   annotations:
     reloader.stakater.com/auto: "true"
+  labels:
+    app.kubernetes.io/name: alertmanager
 spec:
   serviceName: alertmanager
   podManagementPolicy: Parallel
@@ -33,7 +35,7 @@ spec:
             topologyKey: kubernetes.io/hostname
       containers:
       - name: alertmanager
-        image: reg.real-ai.cn/public/alertmanager:v0.21.0
+        image: prom/alertmanager:v0.24.0
         args:
         - --config.file=/etc/alertmanager/config.yml
         - --cluster.listen-address=[$(POD_IP)]:9094
@@ -87,11 +89,17 @@ spec:
           name: alertmanager-config
         - mountPath: /alertmanager
           name: alertmanager-data
+        - mountPath: /templates
+          name: alertmanager-templates
       volumes:
       - name: alertmanager-config
         configMap:
           defaultMode: 420
           name: alertmanager-config
+      - name: alertmanager-templates
+        configMap:
+          defaultMode: 420
+          name: alertmanager-templates
   volumeClaimTemplates:
   - metadata:
       name: alertmanager-data
@@ -100,7 +108,7 @@ spec:
     spec:
       accessModes:
       - ReadWriteOnce
-      storageClassName: "storage-class-nfs"
+      storageClassName: "nfs-client"
       resources:
         requests:
           storage: 30Gi

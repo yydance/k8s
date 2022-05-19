@@ -6,27 +6,20 @@ metadata:
 data:
   config.yml: |-
     global:
-      smtp_smarthost: 'xxxx:587'
-      smtp_from: 'username'
-      smtp_auth_username: 'username'
-      smtp_auth_password: 'userpass'
+      smtp_smarthost: 'smtp.exmail.qq.com:465'
+      smtp_from: 'alertmanager'
+      smtp_auth_username: 'xxx@eeoa.com'
+      smtp_auth_password: 'xxx'
       smtp_require_tls: true
     templates:
-    - '/etc/alertmanager/template/*.tmpl'
+    - '/templates/*.tmpl'
     route:
       receiver: default-emailer
       group_by: ['alertname', 'priority']
       group_wait: 10s
       repeat_interval: 10m
-      #routes:
-      #  - receiver: alert-sms
-      #    match:
-      #      severity: sms
-      #    group_wait: 10s
-      #    repeat_interval: 5m
-
     receivers:
     - name: default-emailer
       email_configs:
-      - to: guang.yang@realai.ai
+      - to: guang.yang@eeoa.com
         send_resolved: false
