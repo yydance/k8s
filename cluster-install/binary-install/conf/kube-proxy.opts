@@ -1,0 +1,5 @@
+KUBE_PROXY_OPTS="--config=/data/app/k8s/conf/kube-proxy.yaml \
+--config-sync-period=10m \
+--kube-api-qps=5 \
+--kube-api-burst=10 \
+--v=2"

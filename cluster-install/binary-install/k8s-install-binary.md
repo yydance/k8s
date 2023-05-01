@@ -1,21 +1,20 @@
 
 [TOC]
 
-
 ### 一、环境说明 
 
 #### 1、主机信息
 
-- omt-yangguang1/10.0.9.198，nginx tcp 6443，kubectl，nfs server
-- omt-yangguang2/10.0.9.199，k8s master， node，nfs-utils
-- omt-yangguang3/10.0.9.200，k8s master，node，nfs-utils
-- omt-yangguang4/10.0.9.201，k8s master，node，nfs-utils
+- omt-yangguang1/10.0.9.198，k8s master，nginx tcp 6443，kubectl，nfs server 
+- omt-yangguang2/10.0.9.199，k8s master/worker， node，nfs-utils
+- omt-yangguang3/10.0.9.200，k8s master/worker，node，nfs-utils
+- omt-yangguang4/10.0.9.201，k8s master/worker，node，nfs-utils
 - 版本
   - 操作系统，centos7.9
   - 内核，5.4.188-lt
-  - k8s，v1.23.5，注意：1.24版本后，k8s移除了dockershm支持，不建议使用docker作为container runtime
-  - docker，20.10.9，后面将移除docker runtime
-  - etcd，3.5.2
+  - k8s，v1.27.1，注意：1.24版本后，k8s移除了dockershm支持，不建议使用docker作为container runtime
+  - containerd
+  - etcd，3.5.8
 - 目录
   ```
   /data/app/k8s
@@ -38,7 +37,7 @@
 
 - nginx，代理kube-apiserver
 - kubectl
-- kube-proxy，metrics 聚合器需要
+- kube-proxy，metrics 聚合器需要(因为已kube-proxy，不再需要)
 
 #### 3、master节点组件
 
@@ -46,13 +45,16 @@
 - kube-apiserver
 - kube-controller-manager
 - kube-scheduler
+- kube-proxy
+- kubelet
+- containerd
 
 
 #### 4、node节点组件
 
 - kubelet
 - kube-proxy
-- docker
+- containerd
 
 
 ### 二、安装部署 
@@ -61,7 +63,7 @@ k8二进制包下载，详情见 [github](https://github.com/kubernetes/kubernet
 
 分发二进制执行文件，199/200/201都需要
 ```
-wget https://dl.k8s.io/v1.23.5/kubernetes-server-linux-amd64.tar.gz
+wget https://dl.k8s.io/v1.27.1/kubernetes-server-linux-amd64.tar.gz
 tar -xvf kubernetes-server-linux-amd64.tar.gz
 cd kubernetes/server/bin/
 cp kube-apiserver kube-controller-manager kube-scheduler kubectl kubelet kube-proxy /usr/local/bin/
@@ -71,31 +73,14 @@ cp kube-apiserver kube-controller-manager kube-scheduler kubectl kubelet kube-pr
 创建节点工作目录
 ```
 mkdir -p /data/app/k8s/{certs,conf,logs}
-mkdir -p /var/lib/kubelet /var/lib/kube-proxy 
+mkdir -p /data/app/k8s/kubelet /data/app/k8s/kube-proxy 
 ```
 
 #### 1、公共部分
 
-##### 1.1 所有节点，安装docker及k8s依赖
+##### 1.1 所有节点，安装containerd及k8s依赖
 
-docker配置文件
-```
-{
-  "registry-mirrors": [
-    "http://docker.mirrors.ustc.edu.cn",
-    "http://f1361db2.m.daocloud.io"
-  ],
-  "insecure-registries": ["0.0.0.0/0"],
-  "log-driver": "json-file",
-  "log-opts": {
-    "max-size": "100m",
-    "max-file": "7",
-    "compress": "true"
-  },
-  "live-restore": true,
-  "exec-opts": ["native.cgroupdriver=systemd"]
-}
-```
+containerd配置文件
 
 安装ipvs依赖包
 ```
@@ -211,18 +196,7 @@ lsmod | grep --color=auto -e ip_vs -e nf_conntrack
 > ipvs模块，在内核4.19+版本nf_conntrack_ipv4已经改为nf_conntrack， 4.18以下使用nf_conntrack_ipv4即可
 
 ##### 1.3 cfssl工具
-```
-cd /data/tmp
-wget https://pkg.cfssl.org/R1.2/cfssl_linux-amd64
-wget https://pkg.cfssl.org/R1.2/cfssljson_linux-amd64
-wget https://pkg.cfssl.org/R1.2/cfssl-certinfo_linux-amd64
-​
-chmod +x cfssl*
-mv cfssl_linux-amd64 /usr/local/bin/cfssl
-mv cfssljson_linux-amd64 /usr/local/bin/cfssljson
-mv cfssl-certinfo_linux-amd64 /usr/local/bin/cfssl-certinfo
-
-```
+略
 
 ##### 1.4 生成ca证书
 
@@ -403,7 +377,7 @@ etcdctl --endpoints=$etcd_ep --cacert=$etcd_ca --cert=$etcd_cert --key=$etcd_key
 创建kube-apiserver-csr
 ```kube-apiserver-csr.json
 {
-"CN": "kubernetes",
+"CN": "kube-apiserver",
   "hosts": [
     "127.0.0.1",
     "10.0.9.198",
@@ -444,62 +418,12 @@ EOF
 
 创建配置文件，命令参数详情参考 [官方](https://kubernetes.io/zh/docs/reference/command-line-tools-reference/kube-apiserver/)
 ```kube-apiserver.conf
-KUBE_APISERVER_OPTS="--enable-admission-plugins=NamespaceLifecycle,NodeRestriction,LimitRanger,ServiceAccount,DefaultStorageClass,ResourceQuota \
-  --anonymous-auth=false \
-  --bind-address=10.0.9.199 \
-  --secure-port=6443 \
-  --advertise-address=10.0.9.199 \
-  --insecure-port=0 \
-  --authorization-mode=Node,RBAC \
-  --runtime-config=api/all=true \
-  --enable-bootstrap-token-auth \
-  --service-cluster-ip-range=10.100.0.0/16 \
-  --token-auth-file=/data/app/k8s/conf/token.csv \
-  --service-node-port-range=30000-60000 \
-  --tls-cert-file=/data/app/k8s/certs/kube-apiserver.pem  \
-  --tls-private-key-file=/data/app/k8s/certs/kube-apiserver-key.pem \
-  --client-ca-file=/data/app/k8s/certs/ca.pem \
-  --kubelet-client-certificate=/data/app/k8s/certs/kube-apiserver.pem \
-  --kubelet-client-key=/data/app/k8s/certs/kube-apiserver-key.pem \
-  --service-account-key-file=/data/app/k8s/certs/ca-key.pem \
-  --service-account-signing-key-file=/data/app/k8s/certs/ca-key.pem  \
-  --service-account-issuer=api \
-  --etcd-cafile=/data/app/etcd/certs/ca.pem \
-  --etcd-certfile=/data/app/etcd/certs/etcd.pem \
-  --etcd-keyfile=/data/app/etcd/certs/etcd-key.pem \
-  --etcd-servers=https://10.0.9.199:2379,https://10.0.9.200:2379,https://10.0.9.201:2379 \
-  --enable-swagger-ui=true \
-  --allow-privileged=true \
-  --apiserver-count=3 \
-  --audit-log-maxage=30 \
-  --audit-log-maxbackup=5 \
-  --audit-log-maxsize=100 \
-  --audit-log-path=/data/app/k8s/logs/kube-apiserver-audit.log \
-  --event-ttl=1h \
-  --alsologtostderr=true \
-  --logtostderr=false \
-  --log-dir=/data/app/k8s/logs \
-  --v=4"
+略
 ```
 
 服务管理service文件
 ```kube-apiserver.service
-[Unit]
-Description=Kubernetes API Server
-Documentation=https://github.com/kubernetes/kubernetes
-After=etcd.service
-Wants=etcd.service
-
-[Service]
-EnvironmentFile=-/data/app/k8s/conf/kube-apiserver.conf
-ExecStart=/usr/local/bin/kube-apiserver $KUBE_APISERVER_OPTS
-Restart=on-failure
-RestartSec=5
-Type=notify
-LimitNOFILE=65536
-
-[Install]
-WantedBy=multi-user.target
+略
 ```
 
 同步相关配置文件到各个节点，3个master节点
@@ -510,8 +434,6 @@ cp token.csv /data/app/k8s/conf
 cp kube-apiserver.conf /data/app/k8s/conf
 cp kube-apiserver.service /usr/lib/systemd/system/
 ```
-
-> 注意修改Kube-apiserver.conf监听的节点IP地址
 
 启动服务
 ```
@@ -568,46 +490,12 @@ kubectl config use-context system:kube-controller-manager --kubeconfig=kube-cont
 
 创建配置文件，命令行参数详见 [官方](https://kubernetes.io/zh/docs/reference/command-line-tools-reference/kube-controller-manager/)
 ```kube-controller-manager.conf
-KUBE_CONTROLLER_MANAGER_OPTS="--port=0 \
-  --secure-port=10257 \
-  --bind-address=127.0.0.1 \
-  --kubeconfig=/data/app/k8s/conf/kube-controller-manager.kubeconfig \
-  --service-cluster-ip-range=10.100.0.0/16 \
-  --cluster-name=kubernetes \
-  --cluster-signing-cert-file=/data/app/k8s/certs/ca.pem \
-  --cluster-signing-key-file=/data/app/k8s/certs/ca-key.pem \
-  --allocate-node-cidrs=true \
-  --cluster-cidr=172.100.0.0/16 \
-  --experimental-cluster-signing-duration=87600h \
-  --root-ca-file=/data/app/k8s/certs/ca.pem \
-  --service-account-private-key-file=/data/app/k8s/certs/ca-key.pem \
-  --leader-elect=true \
-  --feature-gates=RotateKubeletServerCertificate=true \
-  --controllers=*,bootstrapsigner,tokencleaner \
-  --horizontal-pod-autoscaler-sync-period=10s \
-  --tls-cert-file=/data/app/k8s/certs/kube-controller-manager.pem \
-  --tls-private-key-file=/data/app/k8s/certs/kube-controller-manager-key.pem \
-  --use-service-account-credentials=true \
-  --alsologtostderr=true \
-  --logtostderr=false \
-  --log-dir=/data/app/k8s/logs \
-  --v=2"
+略
 ```
 
 创建service管理文件
 ```kube-controller-manager.service
-[Unit]
-Description=Kubernetes Controller Manager
-Documentation=https://github.com/kubernetes/kubernetes
-
-[Service]
-EnvironmentFile=-/data/app/k8s/conf/kube-controller-manager.conf
-ExecStart=/usr/local/bin/kube-controller-manager $KUBE_CONTROLLER_MANAGER_OPTS
-Restart=on-failure
-RestartSec=5
-
-[Install]
-WantedBy=multi-user.target
+略
 ```
 
 启动服务
@@ -663,29 +551,12 @@ kubectl config use-context system:kube-scheduler --kubeconfig=kube-scheduler.kub
 
 创建配置文件，命令行参数见 [官方](https://kubernetes.io/zh/docs/reference/command-line-tools-reference/kube-scheduler/)
 ```kube-scheduler.conf
-KUBE_SCHEDULER_OPTS="--address=127.0.0.1 \
---kubeconfig=/data/app/k8s/conf/kube-scheduler.kubeconfig \
---leader-elect=true \
---alsologtostderr=true \
---logtostderr=false \
---log-dir=/data/app/k8s/logs \
---v=2"
+略
 ```
 
 创建service管理文件
 ```kube-scheduler.service
-[Unit]
-Description=Kubernetes Scheduler
-Documentation=https://github.com/kubernetes/kubernetes
-
-[Service]
-EnvironmentFile=-/data/app/k8s/conf/kube-scheduler.conf
-ExecStart=/usr/local/bin/kube-scheduler $KUBE_SCHEDULER_OPTS
-Restart=on-failure
-RestartSec=5
-
-[Install]
-WantedBy=multi-user.target
+略
 ```
 
 启动服务
@@ -701,7 +572,6 @@ d
 ```admin-csr.json
 {
   "CN": "admin",
-  "hosts": [],
   "key": {
     "algo": "rsa",
     "size": 2048
@@ -736,7 +606,8 @@ kubectl config use-context kubernetes --kubeconfig=admin.config
 ​
 mkdir ~/.kube
 cp kube.config ~/.kube/config
-kubectl create clusterrolebinding kube-apiserver:kubelet-apis --clusterrole=system:kubelet-api-admin --user kubernetes --kubeconfig=~/.kube/config
+kubectl create clusterrolebinding kube-apiserver:kubelet-apis --clusterrole=system:kubelet-api-admin --user kube-apiserver --kubeconfig=~/.kube/config
+> 这里--user 指向kube-apiserver证书中的CN字段
 ```
 
 查看集群状态
@@ -771,79 +642,24 @@ kubectl create clusterrolebinding kubelet-bootstrap --clusterrole=system:node-bo
 
 kubelet.yaml
 ```
-apiVersion: kubelet.config.k8s.io/v1beta1
-kind: KubeletConfiguration
-address: "10.0.9.199"
-port: 10250
-readOnlyPort: 10255
-cgroupDriver: "systemd"
-hairpinMode: "promiscuous-bridge"
-clusterDomain: "cluster.local"
-clusterDNS: ["10.100.0.2"]
-serializeImagePulls: false
-evictionHard:
-  memory.available: "300Mi"
-authentication:
-  x509:
-    clientCAFile: "/data/app/k8s/certs/ca.pem"
-  webhook:
-    enabled: true
-    cacheTTL: "2m0s"
-  anonymous:
-    enabled: false
-authorization:
-  mode: "Webhook"
-  webhook:
-    cacheAuthorizedTTL: "5m0s"
-    cacheUnauthorizedTTL: "30s"
-rotateCertificates: true
-serverTLSBootstrap: true
-oomScoreAdj: -999
-healthzPort: 10248
-healthzBindAddress: "127.0.0.1"
-failSwapOn: false
-evictionPressureTransitionPeriod: 5m0s
+略
 ```
 
 创建service管理文件
 
 kubelet.service
 ```
-[Unit]
-Description=Kubernetes Kubelet
-Documentation=https://github.com/kubernetes/kubernetes
-After=docker.service
-Requires=docker.service
-
-[Service]
-WorkingDirectory=/var/lib/kubelet
-EnvironmentFile=-/data/app/k8s/conf/kubelet.conf
-ExecStart=/usr/local/bin/kubelet $KUBELET_OPTS
-Restart=on-failure
-RestartSec=5
-
-[Install]
-WantedBy=multi-user.target
+略
 ```
 
 kubelet.conf
 ```
-KUBELET_OPTS="--bootstrap-kubeconfig=/data/app/k8s/conf/kubelet-bootstrap.kubeconfig \
---cert-dir=/data/app/k8s/certs \
---kubeconfig=/data/app/k8s/conf/kubelet.kubeconfig \
---config=/data/app/k8s/conf/kubelet.yaml \
---network-plugin=cni \
---rotate-certificates \
---pod-infra-container-image=registry.aliyuncs.com/google_containers/pause:3.2 \
---alsologtostderr=true \
---logtostderr=false \
---log-dir=/data/app/k8s/logs \
---v=2"
+略
 ```
 
 启动服务
 ```
-mkdir -p /var/lib/kubelet
+mkdir -p /data/app/k8s/kubelet
 systemctl daemon-reload
 systemctl enable --now kubelet
 ```
@@ -898,53 +714,24 @@ kubectl config use-context default --kubeconfig=kube-proxy.kubeconfig
 
 kube-proxy.yaml
 ```
-apiVersion: kubeproxy.config.k8s.io/v1alpha1
-kind: KubeProxyConfiguration
-bindAddress: 10.0.9.199
-healthzBindAddress: 10.0.9.199:10256
-metricsBindAddress: 10.0.9.199:10249
-clientConnection:
-  kubeconfig: /data/app/k8s/conf/kube-proxy.kubeconfig
-clusterCIDR: 172.100.0.0/16
-mode: "ipvs"
-ipvs:
-  scheduler: "rr"
-oomScoreAdj: -999
+略
 ```
 
 创建service管理文件
 
 kube-proxy.service
 ```
-[Unit]
-Description=Kubernetes Kube-Proxy Server
-Documentation=https://github.com/kubernetes/kubernetes
-After=network.target
-
-[Service]
-WorkingDirectory=/var/lib/kube-proxy
-EnvironmentFile=-/data/app/k8s/conf/kube-proxy.conf
-ExecStart=/usr/local/bin/kube-proxy $KUBE_PROXY_OPTS
-Restart=on-failure
-RestartSec=5
-LimitNOFILE=65536
-
-[Install]
-WantedBy=multi-user.target
+略
 ```
 
 kube-proxy.conf
 ```
-KUBE_PROXY_OPTS="--config=/data/app/k8s/conf/kube-proxy.yaml \
---alsologtostderr=true \
---logtostderr=false \
---log-dir=/data/app/k8s/logs \
---v=2"
+略
 ```
 
 启动服务
 ```
-mkdir -p /var/lib/kube-proxy
+mkdir -p /data/app/k8s/kube-proxy
 systemctl daemon-reload
 systemctl enable --now kube-proxy
 ​
@@ -981,9 +768,9 @@ data:
   etcd_endpoints: "http://<ETCD_IP>:<ETCD_PORT>"
   # If you're using TLS enabled etcd uncomment the following.
   # You must also populate the Secret below with these files.
-  etcd_ca: ""   # "/calico-secrets/etcd-ca"
-  etcd_cert: "" # "/calico-secrets/etcd-cert"
-  etcd_key: ""  # "/calico-secrets/etcd-key"
+  etcd_ca: "/calico-secrets/etcd-ca"   # "/calico-secrets/etcd-ca"
+  etcd_cert: "/calico-secrets/etcd-cert" # "/calico-secrets/etcd-cert"
+  etcd_key: "/calico-secrets/etcd-key"  # "/calico-secrets/etcd-key"
 
 ```
 
@@ -1011,22 +798,32 @@ cd deployment/kubernetes
 
 测试DNS
 
-> busybox镜像，不要使用版本太高的，解析有问题
-
 dns-test.yaml
 ```
-apiVersion: v1
-kind: Pod
-metadata:
-  name: busybox
-  namespace: default
-spec:
-  containers:
-  - image: busybox:1.28.4
-    command:
-      - sleep
-      - "3600"
-    imagePullPolicy: IfNotPresent
-    name: busybox
-  restartPolicy: Always
+略
 ```
+
+#### 8、metric-server
+按照官方，部署前，先调整kube-apiserver启动参数，增加以下：
+
+```
+--requestheader-client-ca-file=/data/app/k8s/certs/ca.pem \
+--proxy-client-cert-file=/data/app/k8s/certs/proxy-client.pem \
+--proxy-client-key-file=/data/app/k8s/certs/proxy-client-key.pem \
+--requestheader-allowed-names='' \
+```
+
+> 特别说明：这里--requestheader-allowed-names为空，表示允许所有，因为--requestheader-client-ca-file的证书与集群ca是同一个，如果不为空，建议不要使用同一ca证书，可能导致集群认证失败
+
+部署ha metric-server，然后查看
+```
+kubectl top no
+这时候报错，用户被禁止访问
+```
+这里官方yaml文件中SA账号用于内部账号授权，使用kubectl时，需要proxy-client-csr.json中CN用户绑定RBAC
+```user-aggregator.yaml
+略
+注意：使用了特定用户aggregator
+```
+
+

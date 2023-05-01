@@ -1,0 +1,30 @@
+apiVersion: kubelet.config.k8s.io/v1beta1
+kind: KubeletConfiguration
+readOnlyPort: 10255
+cgroupDriver: "systemd"
+hairpinMode: "hairpin-veth"
+clusterDomain: "cluster.local"
+clusterDNS:
+- 10.100.0.2
+serializeImagePulls: false
+evictionHard:
+  memory.available: "200Mi"
+authentication:
+  x509:
+    clientCAFile: "/data/app/k8s/certs/ca.pem"
+tlsMinVersion: VersionTLS12
+rotateCertificates: true
+serverTLSBootstrap: true
+syncFrequency: 1m
+httpCheckFrequency: 20s
+evictionPressureTransitionPeriod: 5m0s
+registryPullQPS: 0
+imageGCHighThresholdPercent: 80
+imageGCLowThresholdPercent: 75
+kubeAPIQPS: 5
+kubeAPIBurst: 10
+containerLogMaxSize: "128Mi"
+containerLogMaxFiles: 5
+systemReserved:
+  cpu: "256m"
+  memory: "256Mi"

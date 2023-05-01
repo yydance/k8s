@@ -1,0 +1,37 @@
+KUBE_CONTROLLER_MANAGER_OPTS="--terminated-pod-gc-threshold=5000 \
+  --concurrent-deployment-syncs=5 \
+  --concurrent-endpoint-syncs=5 \
+  --concurrent-ephemeralvolume-syncs=5 \
+  --concurrent-gc-syncs=20 \
+  --concurrent-service-syncs=2 \
+  --concurrent-rc-syncs=5 \
+  --concurrent-replicaset-syncs=5 \
+  --concurrent-service-endpoint-syncs=5 \
+  --concurrent-statefulset-syncs=5 \
+  --concurrent-resource-quota-syncs=5 \
+  --concurrent-serviceaccount-token-syncs=5 \
+  --kubeconfig=/data/app/k8s/conf/kube-controller-manager.kubeconfig \
+  --service-cluster-ip-range=10.100.0.0/16 \
+  --cluster-signing-cert-file=/data/app/k8s/certs/ca.pem \
+  --cluster-signing-key-file=/data/app/k8s/certs/ca-key.pem \
+  --cluster-signing-duration=87600h \
+  --allocate-node-cidrs=true \
+  --cluster-cidr=172.16.0.0/16 \
+  --root-ca-file=/data/app/k8s/certs/ca.pem \
+  --service-account-private-key-file=/data/app/k8s/certs/ca-key.pem \
+  --feature-gates=MaxUnavailableStatefulSet=true \
+  --controllers=*,bootstrapsigner,tokencleaner \
+  --horizontal-pod-autoscaler-sync-period=10s \
+  --horizontal-pod-autoscaler-cpu-initialization-period=5m \
+  --horizontal-pod-autoscaler-initial-readiness-delay=30s \
+  --horizontal-pod-autoscaler-sync-period=10s \
+  --kube-api-burst=30 \
+  --kube-api-qps=20 \
+  --tls-cert-file=/data/app/k8s/certs/kube-controller-manager.pem \
+  --tls-private-key-file=/data/app/k8s/certs/kube-controller-manager-key.pem \
+  --tls-min-version=VersionTLS12 \
+  --node-monitor-grace-period=30s \
+  --node-startup-grace-period=1m \
+  --resource-quota-sync-period=5m \
+  --use-service-account-credentials=true \
+  --v=2"

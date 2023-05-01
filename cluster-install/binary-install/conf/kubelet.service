@@ -1,0 +1,15 @@
+[Unit]
+Description=Kubernetes Kubelet
+Documentation=https://github.com/kubernetes/kubernetes
+After=containerd.service
+Requires=containerd.service
+
+[Service]
+WorkingDirectory=/data/app/k8s/kubelet
+EnvironmentFile=-/data/app/k8s/conf/kubelet.opts
+ExecStart=/usr/local/bin/kubelet $KUBELET_OPTS
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

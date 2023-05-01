@@ -1,0 +1,8 @@
+KUBE_SCHEDULER_OPTS="--kubeconfig=/data/app/k8s/conf/kube-scheduler.kubeconfig \
+--kube-api-burst=100 \
+--kube-api-qps=50 \
+--leader-elect-lease-duration=15s \
+--tls-cert-file=/data/app/k8s/certs/kube-scheduler.pem \
+--tls-private-key-file=/data/app/k8s/certs/kube-scheduler-key.pem \
+--tls-min-version=VersionTLS12 \
+--v=2"

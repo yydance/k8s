@@ -1,0 +1,37 @@
+KUBE_APISERVER_OPTS="--enable-admission-plugins=NodeRestriction,OwnerReferencesPermissionEnforcement,PersistentVolumeLabel,PodNodeSelector,PodTolerationRestriction,LimitPodHardAntiAffinityTopology \
+  --anonymous-auth=false \
+  --requestheader-client-ca-file=/data/app/k8s/certs/ca.pem \
+  --proxy-client-cert-file=/data/app/k8s/certs/proxy-client.pem \
+  --proxy-client-key-file=/data/app/k8s/certs/proxy-client-key.pem \
+  --requestheader-allowed-names='' \
+  --delete-collection-workers=2 \
+  --authorization-mode=Node,RBAC \
+  --runtime-config=api/all=true \
+  --enable-bootstrap-token-auth \
+  --service-cluster-ip-range=10.100.0.0/16 \
+  --token-auth-file=/data/app/k8s/conf/token.csv \
+  --service-node-port-range=30000-50000 \
+  --tls-cert-file=/data/app/k8s/certs/kube-apiserver.pem  \
+  --tls-private-key-file=/data/app/k8s/certs/kube-apiserver-key.pem \
+  --tls-min-version=VersionTLS12 \
+  --client-ca-file=/data/app/k8s/certs/ca.pem \
+  --kubelet-client-certificate=/data/app/k8s/certs/kube-apiserver.pem \
+  --kubelet-client-key=/data/app/k8s/certs/kube-apiserver-key.pem \
+  --kubelet-timeout=10s \
+  --service-account-issuer=kube-apiserver \
+  --service-account-key-file=/data/app/k8s/certs/ca-key.pem \
+  --service-account-signing-key-file=/data/app/k8s/certs/ca-key.pem  \
+  --etcd-cafile=/data/app/etcd/certs/etcd-ca.pem \
+  --etcd-certfile=/data/app/etcd/certs/etcd.pem \
+  --etcd-keyfile=/data/app/etcd/certs/etcd-key.pem \
+  --etcd-prefix=/eeoregistry \
+  --etcd-readycheck-timeout=5s \
+  --etcd-servers=https://10.0.9.198:2379 \
+  --allow-privileged=true \
+  --audit-log-maxage=30 \
+  --audit-log-maxbackup=5 \
+  --audit-log-maxsize=100 \
+  --audit-log-compress \
+  --audit-log-mode=batch \
+  --audit-log-path=/data/app/k8s/logs/kube-apiserver-audit.log \
+  --v=4"

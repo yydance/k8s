@@ -1,0 +1,7 @@
+KUBELET_OPTS="--bootstrap-kubeconfig=/data/app/k8s/conf/kubelet-bootstrap.kubeconfig \
+--cert-dir=/data/app/k8s/certs \
+--kubeconfig=/data/app/k8s/conf/kubelet.kubeconfig \
+--config=/data/app/k8s/conf/kubelet.yaml \
+--root-dir=/data/app/k8s/kubelet \
+--container-runtime-endpoint=unix:///run/containerd/containerd.sock \
+--v=2"

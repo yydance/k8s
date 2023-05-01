@@ -1,0 +1,9 @@
+apiVersion: kubeproxy.config.k8s.io/v1alpha1
+kind: KubeProxyConfiguration
+clientConnection:
+  kubeconfig: /data/app/k8s/conf/kube-proxy.kubeconfig
+clusterCIDR: 172.16.0.0/16
+mode: "ipvs"
+ipvs:
+  scheduler: "rr"
+oomScoreAdj: -999
