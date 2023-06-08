@@ -345,8 +345,8 @@ storage:
       bucket: "pre-apm"
       endpoint: "obs.cn-north-4.myhuaweicloud.com"
       region: "north-4"
-      access_key: "BGTXWSHTOQAXXCRMHTYH"
-      secret_key: "mVxBGdHbhNz2IJroV3sSSUVnVOsRYfLIOfeLl24Q"
+      access_key: "xxxx"
+      secret_key: "xxxx"
     redis:
       endpoint: "loki-redis-redis-cluster.loki.svc.cluster.local:6379"
       timeout: 1s
