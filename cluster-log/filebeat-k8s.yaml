@@ -1,0 +1,145 @@
+#logging.level: debug
+http:
+  enabled: true
+  host: localhost
+  port: 5066
+# 落文件到宿主机抓取
+filebeat.inputs:
+- type: filestream
+  id: k8s-node-pod-logs-id
+  paths:
+    - /data1/kubernetes/logs/*/*/*/*.log
+    - /data1/kubernetes/logs/*/*/*/*/*.log
+    - /data1/kubernetes/logs/*/*/*/*/*/*.log
+  fields:
+    k8s: true
+  processors:
+    - add_fields:
+        fields:
+          cluster: eeo-pre-hec-k8s
+    - dissect:
+        tokenizer: "%{}/%{}/%{}/%{}/%{kubernetes.namespace}/%{kubernetes.deployment.name}/%{kubernetes.pod.name}/%{}"
+        field: "log.file.path"
+        target_prefix: ""
+- type: filestream
+  id: k8s-node-pod-var-logs-id
+  paths:
+    - /var/lib/containerd/kubernetes/logs/*/*/*/*.log
+    - /var/lib/containerd/kubernetes/logs/*/*/*/*/*.log
+    - /var/lib/containerd/kubernetes/logs/*/*/*/*/*/*.log
+  fields:
+    k8s: true
+  processors:
+    - add_fields:
+        fields:
+          cluster: eeo-pre-hec-k8s
+    - dissect:
+        tokenizer: "%{}/%{}/%{}/%{}/%{}/%{}/%{kubernetes.namespace}/%{kubernetes.deployment.name}/%{kubernetes.pod.name}/%{}"
+        field: "log.file.path"
+        target_prefix: ""
+
+# 标准输出日志抓取
+filebeat.autodiscover:
+  providers:
+    - type: kubernetes
+      node: ${NODE_NAME}
+      hints.enabled: true
+      hints.default_config:
+        type: container
+        paths:
+          - /var/log/containers/*${data.kubernetes.container.id}.log
+        processors:
+          - add_fields:
+              fields:
+                cluster: eeo-pre-hec-k8s
+          - drop_event.when:
+              or:
+              - equals:
+                  kubernetes.daemonset.name: "filebeat"
+              - equals:
+                  kubernetes.namespace: "monitoring"
+              - equals:
+                  kubernetes.namespace: "kube-node-lease"
+              - equals:
+                  kubernetes.namespace: "kube-public"
+              - equals:
+                  kubernetes.namespace: "kube-system"
+              - equals:
+                  kubernetes.namespace: "linkerd"
+              - equals:
+                  kubernetes.namespace: "linkerd-viz"
+              - equals:
+                  kubernetes.container.name: "linkerd-proxy"
+          - drop_fields:
+              fields: ["kubernetes.replicaset", "kubernetes.node", "kubernetes.namespace_uid", "kubernetes.namespace_labels", "container", "log", "agent", "ecs"]
+              ignore_missing: true
+      #templates:
+        #- condition:
+        #    equals:
+        #      kubernetes.namespace: "sit13"
+        #- condition.and:
+        #    - not.equals:
+        #        kubernetes.namespace: "devops"
+        #    - not.equals:
+        #        kubernetes.namespace: "kube-node-lease"
+        #    - not.equals:
+        #        kubernetes.namespace: "kube-public"
+        #    - not.equals:
+        #        kubernetes.namespace: "kube-system"
+        #    - not.equals:
+        #        kubernetes.namespace: "linkerd"
+        #    - not.equals:
+        #        kubernetes.namespace: "linkerd-viz"
+        #    - not.equals:
+        #        kubernetes.namespace: "monitoring"
+        #-  config:
+        #    - type: container
+        #      paths:
+        #        - /var/log/containers/*-${data.kubernetes.container.id}.log
+        #      processors:
+        #        - drop_event.when:
+        #            or:
+        #            - equals:
+        #                kubernetes.namespace: "devops"
+        #            - equals:
+        #                kubernetes.namespace: "kube-node-lease"
+        #            - equals:
+        #                kubernetes.namespace: "kube-public"
+        #            - equals:
+        #                kubernetes.namespace: "kube-system"
+        #            - equals:
+        #                kubernetes.namespace: "linkerd"
+        #            - equals:
+        #                kubernetes.namespace: "linkerd-viz"
+        #            - equals:
+        #                kubernetes.namespace: "monitoring"
+        #        - drop_fields:
+        #            fields: ["kubernetes.replicaset", "kubernetes.node", "kubernetes.namespace_uid", "kubernetes.namespace_labels", "kubernetes.container", "log", "agent", "ecs"]
+        #            ignore_missing: true
+
+processors:
+  #- drop_event.when:
+  #    or:
+  #    - equals:
+  #        kubernetes.namespace: "devops"
+  #    - equals:
+  #        kubernetes.namespace: "monitoring"
+
+cloud.id: ${ELASTIC_CLOUD_ID}
+cloud.auth: ${ELASTIC_CLOUD_AUTH}
+
+output.kafka:
+  # initial brokers for reading cluster metadata
+  hosts: ["kafka:9092"]
+
+  # message topic selection + partitioning
+  topic: 'k8s-%{[kubernetes.namespace]}-%{[kubernetes.deployment.name]}'
+  topics:
+    - topic: "otlp_spans"
+       when.regexp:
+       kubernetes.pod.name: "^apm.*"
+  partition.round_robin:
+    reachable_only: false
+
+  required_acks: 1
+  compression: gzip
