@@ -113,12 +113,12 @@ loki:
       cache_location: /var/loki/cache
       cache_ttl: 168h
     aws:
-      s3: "pre-apm.obs.cn-north-4.myhuaweicloud.com"
-      endpoint: "obs.cn-north-4.myhuaweicloud.com"
-      secret_access_key: "mVxBGdHbhNz2IJroV3sSSUVnVOsRYfLIOfeLl24Q"
-      access_key_id: "BGTXWSHTOQAXXCRMHTYH"
+      s3: "bucket.obs.cn-north-4.myhuaweicloud.com"
+      endpoint: "xxx.myhuaweicloud.com"
+      secret_access_key: "xxxx"
+      access_key_id: "xxx"
       insecure: false
-      bucketnames: "pre-apm"
+      bucketnames: "bucket"
       region: "north-4"
 
 limits_config:
@@ -165,10 +165,10 @@ common:
         password: "ee0^XuFNHMiQ"
   storage:
     s3:
-      s3: "pre-apm.obs.cn-north-4.myhuaweicloud.com"
+      s3: "bucket.obs.cn-north-4.myhuaweicloud.com"
       endpoint: "obs.cn-north-4.myhuaweicloud.com"
-      secret_access_key: "mVxBGdHbhNz2IJroV3sSSUVnVOsRYfLIOfeLl24Q"
-      access_key_id: "BGTXWSHTOQAXXCRMHTYH"
+      secret_access_key: "xxxx"
+      access_key_id: "xxx"
       insecure: false
       bucketnames: "pre-apm"
       region: "north-4"
@@ -427,11 +427,8 @@ redisChunks:
   enabled: true
   redis:
     endpoint: "loki-redis-redis-cluster:6379"
-    #endpoint: "10.0.2.117:26383,10.0.2.118:26383,10.0.2.119:26383"
-    #master_name: "mymaster"
     timeout: 1s
     expiration: 48h
-    #password: "ee@redis^#**"
     password: "ycPA85aIbm"
 
 compactor:
