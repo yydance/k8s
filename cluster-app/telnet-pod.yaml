@@ -1,0 +1,14 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: telnet
+  namespace: loki
+spec:
+  containers:
+  - name: telnet
+    image: realworld/telnet
+    command:
+      - sleep
+      - "infinity"
+    imagePullPolicy: IfNotPresent
+  restartPolicy: Always
