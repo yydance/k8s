@@ -1,0 +1,93 @@
+clusterDomainSuffix: cluster.local
+vmselect:
+  enabled: true
+  name: vmselect
+  image:
+    repository: victoriametrics/vmselect
+    tag: v1.91.2-cluster
+  extraArgs:
+    envflag.enable: "true"
+    envflag.prefix: VM_
+    loggerFormat: json
+    loggerTimezone: "Asia/Shanghai"
+
+  horizontalPodAutoscaler:
+    enabled: false
+    maxReplicas: 10
+    minReplicas: 2
+
+  replicaCount: 2
+  resources:
+    limits:
+      cpu: 4096m
+      memory: 4096Mi
+    requests:
+      cpu: 50m
+      memory: 64Mi
+
+  cacheMountPath: /cache
+  statefulSet:
+    enabled: true
+  persistentVolume:
+    enabled: true
+    size: 20Gi
+    storageClass: "csi-disk-topology"
+
+
+vminsert:
+  enabled: true
+  name: vminsert
+  image:
+    repository: victoriametrics/vminsert
+    tag: v1.91.2-cluster
+  extraArgs:
+    envflag.enable: "true"
+    envflag.prefix: VM_
+    loggerFormat: json
+    replicationFactor: 2
+    loggerTimezone: "Asia/Shanghai"
+
+  horizontalPodAutoscaler:
+    enabled: false
+    maxReplicas: 10
+    minReplicas: 2
+
+  resources:
+    limits:
+      cpu: 4096m
+      memory: 4096Mi
+    requests:
+      cpu: 50m
+      memory: 64Mi
+
+
+vmstorage:
+  enabled: true
+  name: vmstorage
+  image:
+    repository: victoriametrics/vmstorage
+    tag: v1.91.2-cluster
+
+  extraArgs:
+    envflag.enable: "true"
+    envflag.prefix: VM_
+    loggerFormat: json
+    loggerTimezone: "Asia/Shanghai"
+    retentionPeriod: 30d
+
+  persistentVolume:
+    enabled: true
+    accessModes:
+      - ReadWriteOnce
+    storageClass: "csi-disk-topology"
+    mountPath: /storage
+    size: 100Gi
+
+  replicaCount: 2
+  resources:
+    limits:
+      cpu: 8192m
+      memory: 8Gi
+    requests:
+      cpu: 500m
+      memory: 512Mi
