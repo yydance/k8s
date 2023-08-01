@@ -1,0 +1,28 @@
+apiVersion: v1
+data:
+  dex.config: |
+    connectors:
+    - type: ldap
+      name: LDAP
+      id: LDAP
+      config:
+        host: "10.0.2.200:389"
+        insecureNoSSL: true
+        insecureSkipVerify: true
+        bindDN: "cn=Test,ou=System_User,dc=eeo-inc,dc=com"
+        bindPW: "Test99999"
+        usernamePrompt: Username
+        userSearch:
+          baseDN: "ou=Staff,ou=People,dc=eeo-inc,dc=com"
+          filter: ""
+          username: cn
+          idAttr: uid
+          emailAttr: mail
+          nameAttr: displayName
+        groupSearch:
+          baseDN: "ou=System,dc=eeo-inc,dc=com"
+          filter: "(objectClass=Test)"
+          userMatchers:
+          - userAttr: DN
+            groupAttr: uniqueMember
+          nameAttr: cn
