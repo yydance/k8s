@@ -1,0 +1,184 @@
+apiVersion: kubeadm.k8s.io/v1beta3
+bootstrapTokens:
+- groups:
+  - system:bootstrappers:kubeadm:default-node-token
+  token: abcdef.0123456789abcdef
+  ttl: 24h0m0s
+  usages:
+  - signing
+  - authentication
+kind: InitConfiguration
+localAPIEndpoint:
+  advertiseAddress: 10.252.32.4
+  bindPort: 6443
+nodeRegistration:
+  criSocket: unix:///var/run/containerd/containerd.sock
+  imagePullPolicy: IfNotPresent
+  name: pre-k8msre1
+  taints: null
+---
+apiServer:
+  certSANs:
+    - pre-k8msre1
+    - pre-k8msre2
+    - pre-k8msre3
+    - 10.252.32.4
+    - 10.252.32.5
+    - 10.252.32.6
+    - 127.0.0.1
+    - 192.168.0.1
+    - lb-apiserver.k8s.eeo.dom
+    - kubernetes
+    - kubernetes.default
+    - kubernetes.default.svc
+    - kubernetes.default.svc.cluster.local
+  extraArgs:
+    default-not-ready-toleration-seconds: "300"
+    default-unreachable-toleration-seconds: "300"
+    anonymous-auth: "True"
+    authorization-mode: Node,RBAC
+    bind-address: 0.0.0.0
+    apiserver-count: "3"
+    endpoint-reconciler-type: lease
+    service-node-port-range: 30000-32767
+    service-cluster-ip-range: "192.168.0.0/18"
+    kubelet-preferred-address-types: "InternalDNS,InternalIP,Hostname,ExternalDNS,ExternalIP"
+    profiling: "False"
+    request-timeout: "1m0s"
+    enable-aggregator-routing: "False"
+    service-account-lookup: "True"
+    storage-backend: etcd3
+    allow-privileged: "true"
+    event-ttl: 1h0m0s
+  timeoutForControlPlane: 5m0s
+apiVersion: kubeadm.k8s.io/v1beta3
+certificatesDir: /etc/kubernetes/pki
+controlPlaneEndpoint: lb-apiserver.k8s.eeo.dom:8443
+clusterName: kubernetes
+controllerManager:
+  extraArgs:
+    node-monitor-grace-period: 40s
+    node-monitor-period: 5s
+    cluster-cidr: "192.168.64.0/18"
+    service-cluster-ip-range: "192.168.0.0/18"
+    node-cidr-mask-size: "24"
+    profiling: "False"
+    terminated-pod-gc-threshold: "12500"
+    bind-address: 0.0.0.0
+    leader-elect-lease-duration: 15s
+    leader-elect-renew-deadline: 10s
+    configure-cloud-routes: "false"
+dns: {}
+etcd:
+  local:
+    imageRepository: registry.aliyuncs.com/google_containers
+    dataDir: /var/lib/etcd
+    extraArgs:
+      quota-backend-bytes: "0"
+imageRepository: registry.aliyuncs.com/google_containers
+kind: ClusterConfiguration
+kubernetesVersion: 1.28.2
+networking:
+  dnsDomain: cluster.local
+  serviceSubnet: "192.168.0.0/18"
+  podSubnet: "192.168.64.0/18"
+scheduler: {}
+---
+apiVersion: kubelet.config.k8s.io/v1beta1
+authentication:
+  anonymous:
+    enabled: false
+  webhook:
+    cacheTTL: 0s
+    enabled: true
+  x509:
+    clientCAFile: /etc/kubernetes/pki/ca.crt
+authorization:
+  mode: Webhook
+  webhook:
+    cacheAuthorizedTTL: 0s
+    cacheUnauthorizedTTL: 0s
+cgroupDriver: systemd
+clusterDNS:
+- 192.168.0.10
+clusterDomain: cluster.local
+containerRuntimeEndpoint: ""
+cpuManagerReconcilePeriod: 0s
+evictionPressureTransitionPeriod: 0s
+fileCheckFrequency: 0s
+healthzBindAddress: 127.0.0.1
+healthzPort: 10248
+httpCheckFrequency: 0s
+imageMinimumGCAge: 0s
+kind: KubeletConfiguration
+logging:
+  flushFrequency: 0
+  options:
+    json:
+      infoBufferSize: "0"
+  verbosity: 0
+memorySwap: {}
+nodeStatusReportFrequency: 0s
+nodeStatusUpdateFrequency: 0s
+rotateCertificates: true
+serverTLSBootstrap: true
+runtimeRequestTimeout: 0s
+shutdownGracePeriod: 0s
+shutdownGracePeriodCriticalPods: 0s
+staticPodPath: /etc/kubernetes/manifests
+streamingConnectionIdleTimeout: 0s
+syncFrequency: 0s
+volumeStatsAggPeriod: 0s
+registryPullQPS: 0
+eventRecordQPS: 100
+eventBurst: 200
+kubeAPIQPS: 100
+kubeAPIBurst: 200
+serializeImagePulls: false
+maxParallelImagePulls: 100
+containerLogMaxSize: "50Mi"
+containerLogMaxFiles: 5
+systemReserved:
+  cpu: 300m
+  memory: 300m
+kubeReserved:
+  cpu: 100m
+  memory: 150m
+---
+apiVersion: kubeproxy.config.k8s.io/v1alpha1
+kind: KubeProxyConfiguration
+bindAddress: 0.0.0.0
+clientConnection:
+  acceptContentTypes:
+  burst: 50
+  contentType: application/vnd.kubernetes.protobuf
+  kubeconfig:
+  qps: 15
+clusterCIDR: "192.168.64.0/18"
+configSyncPeriod: 15m0s
+conntrack:
+  maxPerCore: 32768
+  min: 131072
+  tcpCloseWaitTimeout: 1h0m0s
+  tcpEstablishedTimeout: 24h0m0s
+enableProfiling: False
+healthzBindAddress: 0.0.0.0:10256
+hostnameOverride: pre-k8msre1
+iptables:
+  masqueradeAll: False
+  masqueradeBit: 14
+  minSyncPeriod: 0s
+  syncPeriod: 30s
+ipvs:
+  excludeCIDRs: []
+  minSyncPeriod: 0s
+  scheduler: rr
+  syncPeriod: 30s
+  strictARP: True
+  tcpTimeout: 0s
+  tcpFinTimeout: 0s
+  udpTimeout: 0s
+metricsBindAddress: 127.0.0.1:10249
+mode: ipvs
+nodePortAddresses: []
+oomScoreAdj: -999

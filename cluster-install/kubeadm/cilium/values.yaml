@@ -1,0 +1,24 @@
+kubeProxyReplacement: true
+k8sServiceHost: 10.252.32.4
+k8sServicePort: 8443
+ipam:
+  operator:
+    clusterPoolIPv4PodCIDRList: ["192.168.64.0/18"]
+    clusterPoolIPv4MaskSize: 24
+hubble:
+  enabled: true
+  relay:
+    enabled: true
+  ui:
+    enabled: true
+  metrics:
+    enabled:
+    - dns
+    - drop
+    - dns
+    - flow
+    - port-distribution
+    - icmp
+    - http
+bpf:
+  masquerade: true
