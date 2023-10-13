@@ -40,3 +40,8 @@ kubeadm init --config kubeadm-config.yaml --upload-certs --skip-phases=addon/kub
 ```
 helm install cilium cilium/cilium -f ./values.yaml -n kube-system
 ```
+
+更新cilium
+```
+helm upgrade cilium -n kube-system --reuse-values --set bpf.Masquerade=true
+```
