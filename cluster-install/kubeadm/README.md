@@ -19,6 +19,11 @@ systemctl enable --now systemd-modules-load
 ```
 
 ### 安装
+安装前，所有节点先拉取镜像
+```
+kubeadm config images pull --config kubeadm-config.yaml
+```
+
 1、所有节点安装containerd
 ```
 yum-config-manager --add-repo https://download.docker.com/linux/centos/docker-ce.repo
