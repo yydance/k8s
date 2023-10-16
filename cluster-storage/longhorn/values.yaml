@@ -1,0 +1,12 @@
+defaultSettings:
+  defaultDataLocality: strict-local
+  defaultDataPath: /var/lib/longhorn
+  nodeDownPodDeletionPolicy: delete-both-statefulset-and-deployment-pod
+  replicaAutoBalance: least-effort
+  orphanAutoDeletion: true
+  fastReplicaRebuildEnabled: false
+  snapshotDataIntegrity: fast-check
+  restoreConcurrentLimit: 2
+  backupConcurrentLimit: 2
+  storageMinimalAvailablePercentage: 15
+  storageReservedPercentageForDefaultDisk: 20
