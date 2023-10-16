@@ -52,3 +52,10 @@ helm install cilium cilium/cilium -f ./values.yaml -n kube-system
 ```
 helm upgrade cilium -n kube-system --reuse-values --set bpf.Masquerade=true
 ```
+
+5、部署后
+部署完成后，根据提示的信息，添加control-plane和worker节点。默认，控制平面节点不能用于pod调度，取消taint即可
+```
+kubectl get no --show-taint
+kubectl taint no pre-k8msre2 node-role.kubernetes.io/control-plane-
+```
