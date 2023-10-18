@@ -52,6 +52,7 @@ mv Rocky-* bak/
 ```
 
 6.2、安装rocky9 repo
+
 [rocky9 packages](https://download.rockylinux.org/pub/rocky/9/BaseOS/x86_64/os/Packages/r/)，下载rocky-gpg-keys、rocky-release、rocky-repos三个包，然后安装
 ```
 rpm -ivh --nodeps --force rocky-*.rpm
