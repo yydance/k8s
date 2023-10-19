@@ -72,6 +72,11 @@ rpm --rebuilddb
 reboot
 ```
 
+完成后，将yum源更换成阿里云
+```
+sed -e 's|^mirrorlist=|#mirrorlist=|g' -e 's|^#baseurl=http://dl.rockylinux.org/$contentdir|baseurl=https://mirrors.aliyun.com/rockylinux|g' -i.bak ./Rocky-*.repo
+```
+
 愉快的玩耍吧！！！
 
 > 非必要不要原地升级(我有不得已苦衷😭)，太麻烦，不如直接更换操作系统，且原地升级后，原系统安装的软件包是否被保留、是否被修改、是否兼容等问题待确定。
