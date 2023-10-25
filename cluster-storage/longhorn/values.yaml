@@ -10,3 +10,5 @@ defaultSettings:
   backupConcurrentLimit: 2
   storageMinimalAvailablePercentage: 15
   storageReservedPercentageForDefaultDisk: 20
+persistence:
+  defaultClassReplicaCount: 2

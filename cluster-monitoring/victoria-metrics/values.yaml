@@ -4,16 +4,17 @@ vmselect:
   name: vmselect
   image:
     repository: victoriametrics/vmselect
-    tag: v1.91.2-cluster
+    tag: v1.93.6-cluster
   extraArgs:
     envflag.enable: "true"
     envflag.prefix: VM_
+    dedup.minScrapeInterval: 30s
     loggerFormat: json
     loggerTimezone: "Asia/Shanghai"
 
   horizontalPodAutoscaler:
-    enabled: false
-    maxReplicas: 10
+    enabled: true
+    maxReplicas: 4
     minReplicas: 2
 
   replicaCount: 2
@@ -30,8 +31,8 @@ vmselect:
     enabled: true
   persistentVolume:
     enabled: true
-    size: 20Gi
-    storageClass: "csi-disk-topology"
+    size: 10Gi
+    storageClass: "longhorn"
 
 
 vminsert:
@@ -39,7 +40,7 @@ vminsert:
   name: vminsert
   image:
     repository: victoriametrics/vminsert
-    tag: v1.91.2-cluster
+    tag: v1.93.6-cluster
   extraArgs:
     envflag.enable: "true"
     envflag.prefix: VM_
@@ -48,8 +49,8 @@ vminsert:
     loggerTimezone: "Asia/Shanghai"
 
   horizontalPodAutoscaler:
-    enabled: false
-    maxReplicas: 10
+    enabled: true
+    maxReplicas: 4
     minReplicas: 2
 
   resources:
@@ -66,12 +67,13 @@ vmstorage:
   name: vmstorage
   image:
     repository: victoriametrics/vmstorage
-    tag: v1.91.2-cluster
+    tag: v1.93.6-cluster
 
   extraArgs:
     envflag.enable: "true"
     envflag.prefix: VM_
     loggerFormat: json
+    dedup.minScrapeInterval: 30s
     loggerTimezone: "Asia/Shanghai"
     retentionPeriod: 30d
 
@@ -79,11 +81,11 @@ vmstorage:
     enabled: true
     accessModes:
       - ReadWriteOnce
-    storageClass: "csi-disk-topology"
+    storageClass: "longhorn"
     mountPath: /storage
-    size: 100Gi
+    size: 30Gi
 
-  replicaCount: 2
+  replicaCount: 3
   resources:
     limits:
       cpu: 8192m
