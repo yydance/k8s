@@ -1,0 +1,451 @@
+global:
+  dnsService: "coredns"
+
+loki:
+  image:
+    tag: 2.8.2
+  config: |
+    auth_enabled: false
+    server:
+      {{- toYaml .Values.server | nindent 2 }}
+    analytics:
+      reporting_enabled: false
+
+    common:
+      {{- toYaml .Values.common | nindent 2 }}
+
+    distributor:
+      {{- toYaml .Values.distributor.config | nindent 2 }}
+
+    ingester:
+      {{- toYaml .Values.ingester.config | nindent 2 }}
+
+
+    limits_config:
+      {{- toYaml .Values.limits_config | nindent 2 }}
+
+    {{- if .Values.loki.schemaConfig}}
+    schema_config:
+      {{- toYaml .Values.loki.schemaConfig | nindent 2}}
+    {{- end}}
+    {{- if .Values.loki.storageConfig}}
+    storage_config:
+    {{- if .Values.indexGateway.enabled}}
+    {{- $indexGatewayClient := dict "server_address" (printf "dns:///%s:9095" (include "loki.indexGatewayFullname" .)) }}
+    {{- $_ := set .Values.loki.storageConfig.boltdb_shipper "index_gateway_client" $indexGatewayClient }}
+    {{- end}}
+    {{- toYaml .Values.loki.storageConfig | nindent 2}}
+    {{- end}}
+
+    runtime_config:
+      file: /var/{{ include "loki.name" . }}-runtime/runtime.yaml
+
+    chunk_store_config:
+      max_look_back_period: 0s
+      {{- if .Values.redisChunks.enabled }}
+      chunk_cache_config:
+        background:
+          writeback_goroutines: 15
+          writeback_buffer: 10000
+        embedded_cache:
+          enabled: false
+        redis:
+          {{- toYaml .Values.redisChunks.redis | nindent 6}}
+      {{- end }}
+
+    table_manager:
+      retention_deletes_enabled: false
+      retention_period: 0s
+
+    query_range:
+      align_queries_with_step: true
+      max_retries: 5
+      cache_results: true
+      results_cache:
+        cache:
+          {{- if .Values.redisChunks.enabled }}
+          redis:
+            {{- toYaml .Values.redisChunks.redis | nindent 8}}
+          {{- end }}
+
+    frontend_worker:
+      parallelism: 20
+      {{- if .Values.queryScheduler.enabled }}
+      scheduler_address: {{ include "loki.querySchedulerFullname" . }}:9095
+      {{- else }}
+      frontend_address: {{ include "loki.queryFrontendFullname" . }}-headless:9095
+      {{- end }}
+
+    frontend:
+      log_queries_longer_than: 5s
+      compress_responses: true
+      max_body_size: 10485760
+      {{- if .Values.queryScheduler.enabled }}
+      scheduler_address: {{ include "loki.querySchedulerFullname" . }}:9095
+      {{- end }}
+      tail_proxy_url: http://{{ include "loki.querierFullname" . }}:3100
+
+    compactor:
+      {{- toYaml .Values.compactor.config | nindent 2 }}
+
+
+    ruler:
+      storage:
+        type: s3
+        s3:
+          {{- toYaml .Values.common.storage.s3 | nindent 6 }}
+      rule_path: /tmp/loki/scratch
+      alertmanager_url: http://alertmanager-main.monitoring.svc.cluster.local:9093
+
+  schemaConfig:
+    configs:
+      - object_store: aws
+        store: boltdb-shipper
+        schema: v11
+        from: "2020-07-10"
+        index:
+          period: 24h
+          prefix: loki_index_
+
+  storageConfig:
+    boltdb_shipper:
+      shared_store: s3
+      active_index_directory: /var/loki/index
+      cache_location: /var/loki/cache
+      cache_ttl: 168h
+    aws:
+      s3: "-apm-loki.obs.cn-north-4.myhuaweicloud.com"
+      endpoint: ".cn-north-4.myhuaweicloud.com"
+      secret_access_key: ""
+      access_key_id: ""
+      insecure: false
+      bucketnames: "pre-apm-loki"
+      region: "north-4"
+
+limits_config:
+  enforce_metric_name: false
+  reject_old_samples: true
+  reject_old_samples_max_age: 168h
+  max_cache_freshness_per_query: 10m
+  split_queries_by_interval: 15m
+  max_concurrent_tail_requests: 10
+  max_streams_matchers_per_query: 1000
+
+server:
+  http_listen_port: 3100
+  grpc_listen_port: 9095
+  http_listen_conn_limit: 0
+  grpc_listen_conn_limit: 0
+  graceful_shutdown_timeout: 30s
+  http_server_read_timeout: 30s
+  http_server_write_timeout: 30s
+  http_server_idle_timeout: 2m
+  grpc_server_max_recv_msg_size: 104857600
+  grpc_server_max_send_msg_size: 104857600
+  grpc_server_max_concurrent_streams: 100
+  grpc_server_keepalive_time: 2h
+  grpc_server_keepalive_timeout: 20s
+  grpc_server_min_time_between_pings: 10s
+  log_format: "logfmt"
+  log_level: "info"
+  log_source_ips_enabled: true
+
+common:
+  path_prefix: /var/loki
+  replication_factor: 3
+  compactor_address: http://{{ include "loki.compactorFullname" . }}:3100
+  ring:
+    kvstore:
+      store: "etcd"
+      prefix: "loki-collectors/"
+      etcd:
+        endpoints: [loki-etcd.loki.svc.cluster.local:2379]
+        dial_timeout: 10s
+        max_retries: 5
+        tls_enabled: false
+        tls_insecure_skip_verify: true
+        username: "root"
+        password: "ee0^XuFNHMiQ"
+  storage:
+    s3:
+      s3: "-apm-loki.obs.cn-north-4.myhuaweicloud.com"
+      endpoint: ".cn-north-4.myhuaweicloud.com"
+      secret_access_key: ""
+      access_key_id: ""
+      insecure: false
+      bucketnames: "pre-apm-loki"
+      region: "north-4"
+
+runtimeConfig: {}
+
+serviceMonitor:
+  enabled: false
+  namespace: null
+  namespaceSelector: {}
+  annotations: {}
+  labels: {}
+  interval: null
+  scrapeTimeout: null
+  relabelings: []
+  metricRelabelings: []
+  targetLabels: []
+  scheme: http
+  tlsConfig: null
+
+prometheusRule:
+  enabled: false
+  namespace: null
+  annotations: {}
+  labels: {}
+  groups: []
+
+ingester:
+  kind: StatefulSet
+  replicas: 2
+  maxUnavailable: 1
+  persistence:
+    enabled: true
+    inMemory: false
+    claims:
+      - name: data
+        size: 10Gi
+        storageClass: "csi-disk-topology"
+      #- name: wal
+      #  size: 50Gi
+  config:
+    lifecycler:
+      num_tokens: 128
+    concurrent_flushes: 32
+    chunk_block_size: 262144
+    chunk_target_size: 1572864
+    chunk_idle_period: 30m
+    chunk_encoding: snappy
+    chunk_retain_period: 1m
+    max_transfer_retries: 0
+    index_shards: 32
+    max_dropped_streams: 10
+    wal:
+      dir: /var/loki/wal
+
+distributor:
+  replicas: 2
+  maxUnavailable: 1
+  config:
+    rate_store:
+      max_request_parallelism: 200
+      ingester_request_timeout: 1s
+      stream_rate_update_interval: 1s
+
+querier:
+  replicas: 1
+  maxUnavailable: null
+  dnsConfig: {}
+  persistence:
+    enabled: true
+    size: 10Gi
+    storageClass: "csi-disk-topology"
+
+queryFrontend:
+  replicas: 1
+  maxUnavailable: null
+  extraEnv:
+    - name: JAEGER_AGENT_HOST
+      value: "tempo-gateway.tempo.svc.cluster.local"
+
+queryScheduler:
+  enabled: false
+  replicas: 2
+  maxUnavailable: 1
+
+tableManager:
+  enabled: false
+
+ingress:
+  enabled: false
+  annotations: {}
+  paths:
+    distributor:
+      - /api/prom/push
+      - /loki/api/v1/push
+    querier:
+      - /api/prom/tail
+      - /loki/api/v1/tail
+    query-frontend:
+      - /loki/api
+    ruler:
+      - /api/prom/rules
+      - /loki/api/v1/rules
+      - /prometheus/api/v1/rules
+      - /prometheus/api/v1/alerts
+  hosts:
+    - loki.example.com
+
+gateway:
+  enabled: true
+  replicas: 2
+  image:
+    tag: 1.20.2-alpine
+  maxUnavailable: 1
+  nginxConfig:
+    logFormat: |-
+      main '$remote_addr - $remote_user [$time_local]  $status '
+              '"$request" $body_bytes_sent "$http_referer" '
+              '"$http_user_agent" "$http_x_forwarded_for"';
+    file: |
+      worker_processes  5;
+      error_log  /dev/stderr;
+      pid        /tmp/nginx.pid;
+      worker_rlimit_nofile 8192;
+
+      events {
+        worker_connections  4096;
+      }
+
+      http {
+        client_body_temp_path /tmp/client_temp;
+        proxy_temp_path       /tmp/proxy_temp_path;
+        fastcgi_temp_path     /tmp/fastcgi_temp;
+        uwsgi_temp_path       /tmp/uwsgi_temp;
+        scgi_temp_path        /tmp/scgi_temp;
+
+        proxy_http_version    1.1;
+
+        default_type application/octet-stream;
+        log_format   {{ .Values.gateway.nginxConfig.logFormat }}
+
+        {{- if .Values.gateway.verboseLogging }}
+        access_log   /dev/stderr  main;
+        {{- else }}
+
+        map $status $loggable {
+          ~^[23]  0;
+          default 1;
+        }
+        access_log   /dev/stderr  main  if=$loggable;
+        {{- end }}
+
+        sendfile     on;
+        tcp_nopush   on;
+        {{- if .Values.gateway.nginxConfig.resolver }}
+        resolver {{ .Values.gateway.nginxConfig.resolver }};
+        {{- else }}
+        resolver {{ .Values.global.dnsService }}.{{ .Values.global.dnsNamespace }}.svc.{{ .Values.global.clusterDomain }};
+        {{- end }}
+
+        {{- with .Values.gateway.nginxConfig.httpSnippet }}
+        {{ . | nindent 2 }}
+        {{- end }}
+
+        server {
+          listen             8080;
+
+          {{- if .Values.gateway.basicAuth.enabled }}
+          auth_basic           "Loki";
+          auth_basic_user_file /etc/nginx/secrets/.htpasswd;
+          {{- end }}
+
+          location = / {
+            return 200 'OK';
+            auth_basic off;
+            access_log off;
+          }
+
+          location = /api/prom/push {
+            set $api_prom_push_backend http://{{ include "loki.distributorFullname" . }}.{{ .Release.Namespace }}.svc.{{ .Values.global.clusterDomain }};
+            proxy_pass       $api_prom_push_backend:3100$request_uri;
+            proxy_http_version 1.1;
+          }
+
+          location = /api/prom/tail {
+            set $api_prom_tail_backend http://{{ include "loki.querierFullname" . }}.{{ .Release.Namespace }}.svc.{{ .Values.global.clusterDomain }};
+            proxy_pass       $api_prom_tail_backend:3100$request_uri;
+            proxy_set_header Upgrade $http_upgrade;
+            proxy_set_header Connection "upgrade";
+            proxy_http_version 1.1;
+          }
+
+          location ~ /prometheus/api/v1/alerts.* {
+            proxy_pass       http://{{ include "loki.rulerFullname" . }}.{{ .Release.Namespace }}.svc.{{ .Values.global.clusterDomain }}:3100$request_uri;
+          }
+          location ~ /prometheus/api/v1/rules.* {
+            proxy_pass       http://{{ include "loki.rulerFullname" . }}.{{ .Release.Namespace }}.svc.{{ .Values.global.clusterDomain }}:3100$request_uri;
+          }
+          location ~ /api/prom/rules.* {
+            proxy_pass       http://{{ include "loki.rulerFullname" . }}.{{ .Release.Namespace }}.svc.{{ .Values.global.clusterDomain }}:3100$request_uri;
+          }
+          location ~ /api/prom/alerts.* {
+            proxy_pass       http://{{ include "loki.rulerFullname" . }}.{{ .Release.Namespace }}.svc.{{ .Values.global.clusterDomain }}:3100$request_uri;
+          }
+
+          location ~ /api/prom/.* {
+            set $api_prom_backend http://{{ include "loki.queryFrontendFullname" . }}-headless.{{ .Release.Namespace }}.svc.{{ .Values.global.clusterDomain }};
+            proxy_pass       $api_prom_backend:3100$request_uri;
+            proxy_http_version 1.1;
+          }
+
+          location = /loki/api/v1/push {
+            set $loki_api_v1_push_backend http://{{ include "loki.distributorFullname" . }}.{{ .Release.Namespace }}.svc.{{ .Values.global.clusterDomain }};
+            proxy_pass       $loki_api_v1_push_backend:3100$request_uri;
+            proxy_http_version 1.1;
+          }
+
+          location = /loki/api/v1/tail {
+            set $loki_api_v1_tail_backend http://{{ include "loki.querierFullname" . }}.{{ .Release.Namespace }}.svc.{{ .Values.global.clusterDomain }};
+            proxy_pass       $loki_api_v1_tail_backend:3100$request_uri;
+            proxy_set_header Upgrade $http_upgrade;
+            proxy_set_header Connection "upgrade";
+            proxy_http_version 1.1;
+          }
+
+          location ~ /loki/api/.* {
+            set $loki_api_backend http://{{ include "loki.queryFrontendFullname" . }}-headless.{{ .Release.Namespace }}.svc.{{ .Values.global.clusterDomain }};
+            proxy_pass       $loki_api_backend:3100$request_uri;
+            proxy_http_version 1.1;
+          }
+
+          {{- with .Values.gateway.nginxConfig.serverSnippet }}
+          {{ . | nindent 4 }}
+          {{- end }}
+        }
+      }
+
+ruler:
+  enabled: false
+  kind: Deployment
+  replicas: 1
+  image:
+  dnsConfig: {}
+  persistence:
+    enabled: false
+    size: 10Gi
+    storageClass: null
+indexGateway:
+  enabled: true
+  replicas: 2
+  maxUnavailable: 1
+  persistence:
+    enabled: true
+    inMemory: false
+    size: 10Gi
+    storageClass: "csi-disk-topology"
+
+redisChunks:
+  enabled: true
+  redis:
+   # endpoint: "loki-redis-redis-cluster:6379"
+    endpoint: "10.0.2.117:26383,10.0.2.118:26383,10.0.2.119:26383"
+    master_name: "mymaster"
+    timeout: 1s
+    expiration: 48h
+    password: "ee@redis^#**"
+    #password: "ycPA85aIbm"
+
+compactor:
+  enabled: true
+  persistence:
+    enabled: true
+    storageClass: "csi-disk-topology"
+    size: 30Gi
+  config:
+    retention_enabled: false
+    shared_store: s3

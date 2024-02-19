@@ -1,0 +1,5 @@
+
+部署命令
+```
+helm install tempo grafana/tempo-distributed -f tempo.yaml -n tempo
+```

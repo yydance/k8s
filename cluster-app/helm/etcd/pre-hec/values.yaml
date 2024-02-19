@@ -1,0 +1,35 @@
+global:
+  storageClass: ""
+image:
+  repository: bitnami/etcd
+  tag: 3.5.9-debian-11-r4
+
+auth:
+  rbac:
+    rootPassword: "ee0^XuFNHMiQ"
+  token:
+    enabled: false
+logLevel: "info"
+replicaCount: 3
+resources.limits: {}
+resources.requests: {}
+extraVolumes: []
+extraVolumeMounts: []
+service:
+  type: ClusterIP
+  enabled: true
+
+persistence:
+  enabled: true
+  size: 10Gi
+  storageClass: "csi-disk-topology"
+
+metrics:
+  enabled: true
+extraEnvVars:
+  - name: ETCD_QUOTA_BACKEND_BYTES
+    value: "8589934592"
+  - name: ETCD_AUTO_COMPACTION_RETENTION
+    value: "12"
+  - name: ETCD_AUTO_COMPACTION_MODE
+    value: "periodic"

@@ -1,0 +1,37 @@
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: etcd-backup-cronjob
+  namespace: global
+spec:
+ schedule: "*/5 * * * *"
+ jobTemplate:
+  spec:
+    template:
+      metadata:
+       labels:
+        app: etcd-backup-cronjob
+      spec:
+        containers:
+        - name: etcd
+          image: bitnami/etcd:3.5.9-debian-11-r4
+          command:
+          - sh
+          - -c
+          - "etcdctl --endpoints $ENDPOINT --user $USER:$PASSWORD snapshot save /snapshot/$(date +%Y%m%d_%H%M%S)_snapshot.db"
+          env:
+          - name: USER
+            value: root
+          - name: PASSWORD
+            value: ee0^XuFNHMiQ
+          - name: ENDPOINT
+            value: "etcd:2379"
+          volumeMounts:
+            - mountPath: "/snapshot"
+              name: snapshot
+              subPath: data/etcd-snapshot
+        restartPolicy: OnFailure
+        volumes:
+          - name: snapshot
+            persistentVolumeClaim:
+              claimName: etcd-backup-pvc

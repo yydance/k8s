@@ -1,0 +1,68 @@
+agent:
+  mode: 'flow'
+  configMap:
+    create: true
+    content: |
+      logging {
+        level  = "info"
+        format = "logfmt"
+      }
+
+      discovery.kubernetes "pods" {
+        role = "pod"
+
+        namespaces {
+          names = ["sit13", "uat14", "im", "eeo", "pyroscope", "monitoring", "prometheus", "tempo", "loki"]
+        }
+
+        selectors {
+          role = "pod"
+          label = "apptype=go,business=classin"
+          field = "spec.nodeName=" + coalesce(env("HOSTNAME"), constants.hostname)
+        }
+      }
+
+      discovery.relabel "keep_pod_name" {
+        targets = discovery.kubernetes.pods.targets
+        rule {
+          source_labels = ["__meta_kubernetes_pod_name"]
+          action        = "replace"
+          target_label = "pod"
+        }
+        rule {
+          source_labels = ["__meta_kubernetes_pod_label_app"]
+          action = "replace"
+          target_label = "app"
+        }
+        rule {
+          source_labels = ["__meta_kubernetes_pod_label_deploy"]
+          action = "replace"
+          target_label = "deploy"
+        }
+      }
+
+      pyroscope.scrape "pods" {
+        forward_to = [pyroscope.write.distributor.receiver]
+        targets = discovery.relabel.keep_pod_name.output
+        scrape_interval = "15s"
+      }
+      pyroscope.write "distributor" {
+        endpoint {
+          url = "http://10.252.184.237:32389"
+        }
+      }
+
+  securityContext:
+    privileged: true
+    runAsGroup: 0
+    runAsUser: 0
+
+controller:
+  hostPID: true
+  podAnnotations:
+    profiles.grafana.com/memory.scrape: "true"
+    profiles.grafana.com/memory.port_name: "http-metrics"
+    profiles.grafana.com/cpu.scrape: "true"
+    profiles.grafana.com/cpu.port_name: "http-metrics"
+    profiles.grafana.com/goroutine.scrape: "true"
+    profiles.grafana.com/goroutine.port_name: "http-metrics"
