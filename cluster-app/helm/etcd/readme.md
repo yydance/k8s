@@ -2,6 +2,7 @@
 
 ### helm部署
 ```
+helm repo add bitnami https://charts.bitnami.com/bitnami
 helm install loki-etcd bitnami/etcd -f values.yaml  -n loki
 ```
 
