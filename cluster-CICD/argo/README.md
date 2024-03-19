@@ -12,7 +12,7 @@ kubectl create secret tls argocd-server-tls --cert=./eeo.cn.pem --key=./eeo.cn.k
 ```
 
 ### 集成sso
-单点登录，官方组件是dex，这里使用keycloak，见[官方配置](https://argo-cd.readthedocs.io/en/stable/operator-manual/user-management/keycloak/)。
+单点登录，官方组件是dex，这里使用keycloak，见[官方配置](https://argo-cd.readthedocs.io/en/stable/operator-manual/user-management/keycloak/)，需要注意，keycloak配置`realm`时，配置SSL为`无`
 
 修改配置configmap `argocd-cm`
 ```
@@ -33,5 +33,3 @@ policy.csv: |
     g, devBase, role:readonly
   policy.default: role:none
 ```
-
-需要注意：keycloak配置`realm`时，配置SSL为`无`
