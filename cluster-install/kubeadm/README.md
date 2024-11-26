@@ -59,3 +59,13 @@ helm upgrade cilium -n kube-system --reuse-values --set bpf.Masquerade=true
 kubectl get no --show-taint
 kubectl taint no pre-k8msre2 node-role.kubernetes.io/control-plane-
 ```
+
+### 问题记录
+1. 证书更新后查看pod日志失败，tls internal error
+```
+问题：kubelet server/client证书未更新，当kubelet证书到期后，会自动发起csr证书请求，但是集群不会自动批准csr请求，通过`kubectl get csr`可查看
+解决：手动批准证书，`kubectl get csr|grep Pending|awk '{print $1}'|xargs -n1 kubectl certificate approve`
+
+自动批准csr，尚未测试
+```
+2. 
