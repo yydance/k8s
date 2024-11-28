@@ -15,3 +15,6 @@ helm install agent grafana/grafana-agent -f values.yaml -n pyroscope
 
 helm install pyroscope grafana/pyroscope -f values.yaml -n pyroscope
 ```
+
+### 注意事项
+- 对于一个pod多个container，agent会对每个container目标采集数据，这对于profile的cpu指标，下一个周期采集前采集数据会导致500，因此需要过滤container
