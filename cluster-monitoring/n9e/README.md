@@ -1,6 +1,8 @@
 夜莺监控
 ---
 
+> 夜莺监控中，很多模版图表使用了一些标签，使用过程中缺失的需要在categraf中补齐
+
 基本环境
 - server，v8.0.0-beta.10版本
 - categraf，v0.4.3，建议更新到v0.4.8或者最新版
@@ -36,6 +38,12 @@
 ### 自定义采集
 使用`exec`插件完成
 
-### 采集k8s集群数据指标
- 
+### k8s集群数据指标
+不推荐使用categraf插件采集k8s集群组件、pod、container、metrics等指标数据，原因：
+- 插件标签处理不方便，且各插件文档描述较少，可能需要看源码确定，dashboard中面板不匹配，需要做变更
+- 基于prometheus的生态，很多应用直接使用prometheus crd定义，便于对接生态应用
+
+所以，这里使用prometheus采集k8s集群所有数据指标，数据存储到`victoriaMetrics`，在夜莺dashboard中使用vm数据源进行所有操作
+
+
 ## 控制台使用
