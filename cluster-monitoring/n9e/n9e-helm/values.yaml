@@ -1,0 +1,198 @@
+expose:
+  type: ingress
+  tls:
+    enabled: false
+    certSource: auto
+    auto:
+      commonName: ""
+    secret:
+      secretName: ""
+  ingress:
+    hosts:
+      web: eop-sgw.xxx-inc.com
+    className: cilium
+    controller: default
+    kubeVersionOverride: ""
+    annotations: {}
+    nightingale:
+      annotations: {}
+  clusterIP:
+    name: nightingale
+    annotations: {}
+    ports:
+      httpPort: 80
+      httpsPort: 443
+  nodePort:
+    name: nightingale
+    ports:
+      http:
+        port: 80
+        nodePort: 30007
+      https:
+        port: 443
+        nodePort: 30009
+  loadBalancer:
+    name: nightingale
+    IP: ""
+    ports:
+      httpPort: 80
+      httpsPort: 443
+    annotations: {}
+    sourceRanges: []
+
+externalURL: https://eop-sgw.xxx-inc.com
+
+ipFamily:
+  ipv6:
+    enabled: false
+  ipv4:
+    enabled: true
+
+persistence:
+  enabled: false
+
+imagePullPolicy: IfNotPresent
+
+imagePullSecrets:
+
+updateStrategy:
+  type: RollingUpdate
+
+logLevel: info
+
+caSecretName: ""
+
+secretKey: "not-a-secure-key"
+
+nginx:
+  image:
+    repository: docker.io/library/nginx
+    tag: stable-alpine
+  serviceAccountName: ""
+  automountServiceAccountToken: false
+  replicas: 1
+  # resources:
+  #  requests:
+  #    memory: 256Mi
+  #    cpu: 100m
+  nodeSelector: {}
+  tolerations: []
+  affinity: {}
+  ## Additional deployment annotations
+  podAnnotations: {}
+  ## The priority class to run the pod as
+  priorityClassName:
+
+database:
+  type: external
+  internal:
+    serviceAccountName: ""
+    automountServiceAccountToken: false
+    image:
+      repository: docker.io/library/mysql
+      tag: 5.7
+    username: "root"
+    password: "1234"
+    shmSizeLimit: 512Mi
+    nodeSelector: {}
+    resources: {}
+    tolerations: []
+    affinity: {}
+    priorityClassName:
+    initContainer:
+      migrator: {}
+      permissions: {}
+  external:
+    host: "mysql.global"
+    port: "3306"
+    name: "n9e_v7"
+    username: "****"
+    password: "****"
+    sslmode: "disable"
+  maxIdleConns: 100
+  maxOpenConns: 900
+  podAnnotations: {}
+
+redis:
+  type: external
+  internal:
+    serviceAccountName: ""
+    automountServiceAccountToken: false
+    image:
+      repository: docker.io/library/redis
+      tag: 6.2
+    nodeSelector: {}
+    tolerations: []
+    affinity: {}
+    priorityClassName:
+  external:
+    addr: "redis.global:6379"
+    sentinelMasterSet: ""
+    password: ""
+    mode: "standalone"
+  podAnnotations: {}
+
+prometheus:
+  type: external
+  internal:
+    username: ""
+    password: ""
+    serviceAccountName: ""
+    automountServiceAccountToken: false
+    image:
+      repository: docker.io/prom/prometheus
+      tag: latest
+    nodeSelector: {}
+    tolerations: []
+    affinity: {}
+    priorityClassName:
+  external:
+    host: "prometheus-k8s.monitoring"
+    port: "9090"
+    username: ""
+    password: ""
+  podAnnotations: {}
+
+categraf:
+  type: external
+  internal:
+    serviceAccountName: ""
+    automountServiceAccountToken: false
+    image:
+      repository: flashcatcloud/categraf
+      tag: latest
+    nodeSelector: {}
+    tolerations: []
+    affinity: {}
+    priorityClassName:
+    ## Parm: categraf.internal.docker_socket  Desc: the path of docker socket on kubelet node.
+    ## "unix:///var/run/docker.sock" is default, if your kubernetes runtime is container or others, empty this variable.
+    ## docker_socket: ""
+    docker_socket: unix:///var/run/docker.sock
+  external:
+    host: "10.252.32.4"
+    port: "8094"
+    password: ""
+  podAnnotations: {}
+
+n9e:
+  type: internal
+  internal:
+    replicas: 1
+    serviceAccountName: ""
+    automountServiceAccountToken: false
+    image:
+      repository: registry.xxx-inc.com/yangguang/nightingale
+      tag: v8.0.0-beta.10
+    resources: {}
+    #  requests:
+    #    memory: 512Mi
+    #    cpu: 1000m
+    nodeSelector: { }
+    tolerations: [ ]
+    affinity: { }
+    priorityClassName:
+  external:
+    host: "192.168.0.4"
+    port: "17000"
+  podAnnotations: { }

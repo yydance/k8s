@@ -1,0 +1,51 @@
+[global]
+print_configs = false
+hostname = ""
+omit_hostname = false
+interval = 15
+providers = ["local"]
+concurrency = -1
+[global.labels]
+ident = "$hostname"
+[log]
+file_name = "stdout"
+max_size = 100
+max_age = 2
+max_backups = 3
+local_time = true
+compress = true
+[writer_opt]
+batch = 1000
+chan_size = 1000000
+[[writers]]
+name = "srek8s-vmstorage"
+url = "http://192.168.30.28:8480/insert/0/prometheus/"
+timeout = 5000
+dial_timeout = 2500
+max_idle_conns_per_host = 100
+[http]
+enable = false
+address = ":9100"
+print_access = false
+run_mode = "release"
+ignore_hostname = false
+agent_host_tag = ""
+ignore_global_labels = false
+[ibex]
+enable = false
+interval = "1000ms"
+servers = ["127.0.0.1:20090"]
+meta_dir = "./meta"
+[heartbeat]
+enable = true
+url = "http://192.168.27.79:80/v1/n9e/heartbeat?gid=3"
+interval = 10
+basic_auth_user = "root"
+basic_auth_pass = "root.2020"
+timeout = 5000
+dial_timeout = 2500
+max_idle_conns_per_host = 100
+[prometheus]
+enable = false
+scrape_config_file = "/path/to/in_cluster_scrape.yaml"
+log_level = "info"
