@@ -69,4 +69,18 @@ kubectl taint no pre-k8msre2 node-role.kubernetes.io/control-plane-
 
 自动批准csr，尚未测试
 ```
-2. 
+2. 监控采集内存使用率偏高
+
+监控采集的node 内存使用与kubectl top no不一致，kubectl top no获取的内存使用率偏高
+
+原因：k8s集群kubelet使用systemd cgroupDriver，containerd使用systemd，systemd未启用cgroupv2
+
+解决：操作系统内核systemd启用cgroupv2，`GRUB_CMDLINE_LINUX`添加`systemd.unified_cgroup_hierarchy=1`
+
+```
+$ cat /etc/default/grub
+GRUB_CMDLINE_LINUX="rhgb net.ifnames=0 biosdevname=0 console=ttyS0 quiet crashkernel=1G-4G:192M,4G-64G:256M,64G-:512M systemd.unified_cgroup_hierarchy=1"
+
+$ grub2-mkconfig -o /boot/grub2/grub.cfg
+$ reboot
+```

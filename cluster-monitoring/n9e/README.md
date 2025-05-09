@@ -16,7 +16,7 @@
 - 网络指标
 - 大屏图标
 - 分级告警
-- 角色权限
+- 角色权限，体现在各个团队、业务组仅拥有部分主机监控项、dashboard、告警等权限.
 - ...
 
 ## server
@@ -80,3 +80,19 @@
 **告警收敛**
 
 当前并不能配置类似alertmanage复杂的收敛规则，仅限于完全一样的条件，高级别抑制低级别，比如内存告警设置了30%、20%、10%三个条件告警，10%触发的情况下会抑制30%和20%的告警.
+
+**监控取值与kubectl top不一致**
+
+监控采集的node 内存使用与kubectl top no不一致，kubectl top no获取的内存使用率偏高
+
+原因：k8s集群kubelet使用systemd cgroupDriver，containerd使用systemd，systemd未启用cgroupv2
+
+解决：操作系统内核systemd启用cgroupv2，`GRUB_CMDLINE_LINUX`添加`systemd.unified_cgroup_hierarchy=1`
+
+```
+$ cat /etc/default/grub
+GRUB_CMDLINE_LINUX="rhgb net.ifnames=0 biosdevname=0 console=ttyS0 quiet crashkernel=1G-4G:192M,4G-64G:256M,64G-:512M systemd.unified_cgroup_hierarchy=1"
+
+$ grub2-mkconfig -o /boot/grub2/grub.cfg
+$ reboot
+```
